@@ -288,6 +288,47 @@ A typical realm with CLI, Telegram, and a single agent:
 
 All external Exchange edges in this example are AGSP sessions. The agent process is not. The Exchange talks to the agent through its attached sidecar, and the sidecar invokes or polls the local agent. When the agent produces a reply, the sidecar emits the corresponding AGSP message and the Exchange fans it out to CLI and both bridges. When a human types in the Telegram thread, the bridge forwards it as an AGSP message attributed to that human; if the message has no explicit agent target, the Exchange stores it as an `exchange_message` in the local transcript/history when enabled.
 
+### 3.2.1 Agent Attachment and Join Flow
+
+The protocol layers are intentionally split:
+
+- **AGRP** is the overall system layer: Control Plane, Exchange, routing, realm access, policy, audit, and lifecycle.
+- **AGSP** is the session protocol used when the sidecar joins the Exchange and when the Exchange exchanges messages with humans, bridges, peer Exchanges, and ARLM.
+- **ACP** is a local agent-facing protocol. It is not spoken on the Exchange wire. A sidecar may use ACP, stdio JSON-RPC, HTTP, or another local adapter to talk to the agent process.
+
+```mermaid
+flowchart LR
+    subgraph agrp["AGRP: control and routing layer"]
+        cp[Control Plane]
+        exchange[Exchange]
+        realm[Optional Realm State]
+        cp -->|spawn / configure| arlm[ARLM]
+        cp -->|routing / realm access| exchange
+        exchange <-->|authorized access| realm
+    end
+
+    subgraph runtime["Agent runtime"]
+        sidecar[Attached Sidecar]
+        agent[Agent Process]
+        sidecar <-->|ACP or local adapter| agent
+    end
+
+    humans[Humans / Bridges / Peer Exchanges] <-->|AGSP| exchange
+    exchange <-->|AGSP session| sidecar
+    arlm -->|spawn| sidecar
+    arlm -->|spawn| agent
+```
+
+Join and interaction flow in base AGRP v1:
+
+1. The Control Plane tells the ARLM to start the agent and its attached sidecar.
+2. The sidecar establishes its local control channel to the agent process, for example via ACP.
+3. The sidecar joins the Exchange over **AGSP** with role `agent` and optional `realm`.
+4. The Exchange returns session metadata, capabilities, and the current routing snapshot.
+5. Humans, bridges, or peer Exchanges send AGRP-routed messages to the Exchange; the Exchange delivers delegated work to the sidecar over **AGSP**.
+6. The sidecar invokes or polls the agent over **ACP** or another local adapter.
+7. The agent replies locally; the sidecar translates that reply back into **AGSP** and sends it to the Exchange for routing, fan-out, approvals, or resource mediation under **AGRP** rules.
+
 ### 3.3 Multi-Exchange Topology
 
 Across multiple realms and Exchanges, the mesh topology is a **configuration**, not code. The Control Plane defines which Exchanges connect to which. Any topology can be expressed: hub-and-spoke, tree, ring, full mesh, or hierarchical.
