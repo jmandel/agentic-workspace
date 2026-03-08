@@ -1,8 +1,8 @@
-# Agent Relay Protocol (ARP)
+# Agent Relay Protocol (AGRP)
 
-Repository for the draft Agent Relay Protocol (ARP) specification, written as an RFC-style markdown memo for agent mesh switching, workspace lifecycle, and message routing.
+Repository for the draft Agent Relay Protocol (AGRP) specification, written as an RFC-style markdown memo for agent mesh switching, workspace lifecycle, and message routing.
 
-The main document is [arp-rfc.md](./arp-rfc.md). It describes:
+The main document is [agrp-rfc.md](./agrp-rfc.md). It describes:
 
 - the gap between MCP, ACP, A2A, and repository-level agent guidance
 - Rooms, Workspaces, Client Bridges, the Control Plane, and the Runtime Lifecycle Manager
@@ -11,7 +11,7 @@ The main document is [arp-rfc.md](./arp-rfc.md). It describes:
 
 ## Repository Layout
 
-- [arp-rfc.md](./arp-rfc.md) - the draft RFC
+- [agrp-rfc.md](./agrp-rfc.md) - the draft RFC
 - [LICENSE](./LICENSE) - MIT license
 
 ## Status

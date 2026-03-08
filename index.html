@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Agent Relay Protocol (ARP) RFC Draft</title>
+    <title>Agent Relay Protocol (AGRP) RFC Draft</title>
     <meta
       name="description"
-      content="Draft RFC for the Agent Relay Protocol (ARP), a switching fabric and workspace infrastructure for agent meshes."
+      content="Draft RFC for the Agent Relay Protocol (AGRP), a switching fabric and workspace infrastructure for agent meshes."
     >
     <style>
       :root {
@@ -218,10 +218,9 @@
     <main class="page">
       <section class="hero">
         <p class="eyebrow">Request For Comments / Draft / March 2026</p>
-        <h1>Agent Relay Protocol (ARP)</h1>
         <div class="hero-links">
-          <a href="https://github.com/Agent-Relay-Protocol/arp-rfc">Repository</a>
-          <a href="./arp-rfc.md">Markdown Source</a>
+          <a href="https://github.com/Agent-Relay-Protocol/agrp-rfc">Repository</a>
+          <a href="./agrp-rfc.md">Markdown Source</a>
         </div>
         <p id="status" class="status">Loading RFC text...</p>
       </section>
@@ -229,8 +228,8 @@
       <article id="content" class="document" aria-live="polite"></article>
       <noscript>
         <p class="error">
-          This page renders <code>arp-rfc.md</code> in the browser and requires JavaScript.
-          You can still read the source directly at <a href="./arp-rfc.md">arp-rfc.md</a>.
+          This page renders <code>agrp-rfc.md</code> in the browser and requires JavaScript.
+          You can still read the source directly at <a href="./agrp-rfc.md">agrp-rfc.md</a>.
         </p>
       </noscript>
     </main>
@@ -291,7 +290,7 @@ flowchart TB
 flowchart TB
     app[Application Layer<br/>Agent business logic and task orchestration]
     a2a[A2A<br/>Agent-to-agent collaboration]
-    arp[ARP<br/>Switching Fabric + Workspaces]
+    arp[AGRP<br/>Switching Fabric + Workspaces]
     asp[ASP<br/>JSON-RPC sessions and envelopes]
     transport[Transport<br/>gRPC / WebSocket / TCP]
     mcp[MCP<br/>Tool and Data Access]
@@ -338,13 +337,13 @@ sequenceDiagram
 `,
         "49-approval-flow": `
 sequenceDiagram
-    participant Agent
+    participant Requester
     participant Room
     participant Humans
-    Agent->>Room: approval_request<br/>action=mutating resource access, risk=high
-    Room->>Humans: fan-out to role:human
-    Humans-->>Room: approval_response<br/>approved=true, approver=itbaron
-    Room-->>Agent: approval_response
+    Requester->>Room: operation request
+    Room->>Humans: approval_request<br/>action=mutating resource access, risk=high
+    Humans-->>Room: approval_response<br/>approved=true, approver=user1
+    Room-->>Requester: routed result or policy decision
 `,
         "51-state-machine": `
 stateDiagram-v2
@@ -360,7 +359,7 @@ sequenceDiagram
     participant RoomA as Room A
     participant RoomB as Room B
     participant Infra as infra-agent sidecar
-    Claude->>RoomA: to arp://myns/infra/infra-agent
+    Claude->>RoomA: to arl://myns/infra/infra-agent
     RoomA->>RoomA: lookup local routing table
     RoomA->>RoomB: forward ASP envelope<br/>source_workspace=myns/myproject<br/>destination_workspace=myns/infra<br/>room_src=room-7a3f ttl=7
     RoomB->>Infra: deliver local ASP message
@@ -395,7 +394,7 @@ flowchart LR
 sequenceDiagram
     participant Client as External A2A Client
     participant Boundary as Boundary Room
-    participant Mesh as Internal ARP Mesh
+    participant Mesh as Internal AGRP Mesh
     Client->>Boundary: GET /.well-known/agent.json
     Boundary-->>Client: proxied Agent Card
     Client->>Boundary: POST /tasks
@@ -439,10 +438,10 @@ sequenceDiagram
       });
 
       try {
-        const response = await fetch("./arp-rfc.md", { cache: "no-store" });
+        const response = await fetch("./agrp-rfc.md", { cache: "no-store" });
 
         if (!response.ok) {
-          throw new Error(`Unable to load arp-rfc.md (${response.status})`);
+          throw new Error(`Unable to load agrp-rfc.md (${response.status})`);
         }
 
         const markdown = await response.text();
@@ -466,13 +465,13 @@ sequenceDiagram
         });
 
         await mermaid.run({ querySelector: ".mermaid" });
-        status.textContent = "Rendered from arp-rfc.md";
+        status.textContent = "Rendered from agrp-rfc.md";
       } catch (error) {
-        status.textContent = "Unable to render arp-rfc.md";
+        status.textContent = "Unable to render agrp-rfc.md";
         content.innerHTML = `
           <div class="error">
             <p>Failed to render the RFC in the browser.</p>
-            <p><a href="./arp-rfc.md">Open the markdown source</a>.</p>
+            <p><a href="./agrp-rfc.md">Open the markdown source</a>.</p>
             <p><code>${String(error.message ?? error)}</code></p>
           </div>
         `;

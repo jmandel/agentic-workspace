@@ -1,17 +1,17 @@
-# Agent Relay Protocol (ARP)
+# Agent Relay Protocol (AGRP)
 ## RFC Draft — Switching Fabric and Workspace Infrastructure for Agent Meshes
 
 **Status:** Draft  
 **Intended Status:** Informational  
 **Date:** March 2026  
-**Working Group:** Agent-Relay-Protocol / itbaron-draft  
+**Working Group:** Agent-Relay-Protocol / working-draft
 **Author:** Aleksei Kudriashov <akud.soft@gmail.com>
 
 ---
 
 ## Why This RFC Exists
 
-For a non-technical reader, ARP is a shared switchboard for human and agent work. It exists so one workspace can:
+For a non-technical reader, AGRP is a shared switchboard for human and agent work. It exists so one workspace can:
 
 - connect people from chat, terminal, and IDE clients
 - connect agents working on the same task
@@ -19,7 +19,7 @@ For a non-technical reader, ARP is a shared switchboard for human and agent work
 - keep audit history and workspace lifecycle under one control plane
 - link trusted workspaces together when work must cross boundaries
 
-Without ARP, the current protocol stack solves individual links such as editor-to-agent or agent-to-tool communication, but not the shared workspace fabric around them. This RFC defines that missing layer.
+Without AGRP, the current protocol stack solves individual links such as editor-to-agent or agent-to-tool communication, but not the shared workspace fabric around them. This RFC defines that missing layer.
 
 ```
  [People]
@@ -39,7 +39,7 @@ Without ARP, the current protocol stack solves individual links such as editor-t
 
 ## High-Level Room View
 
-At runtime, ARP centers work around a Room. Humans and bridges connect to the Room, the Control Plane and RLM manage lifecycle around it, and every agent is represented through a 1:1 attached sidecar. The sidecar speaks ASP, receives delegated requests plus signed mandates, and invokes or polls the passive agent locally.
+At runtime, AGRP centers work around a Room. Humans and bridges connect to the Room, the Control Plane and RLM manage lifecycle around it, and every agent is represented through a 1:1 attached sidecar. The sidecar speaks ASP, receives delegated requests plus signed mandates, and invokes or polls the passive agent locally.
 
 ```
  [Human User] ------------------------------------------\
@@ -62,11 +62,11 @@ At runtime, ARP centers work around a Room. Humans and bridges connect to the Ro
 
 ## Abstract
 
-This document specifies the Agent Relay Protocol (ARP), a switching fabric and workspace infrastructure for autonomous agent meshes. ARP defines how agents, humans, and client bridges connect to Workspaces; how Rooms relay messages between participants; how a Control Plane manages topology, workspace lifecycle, and routing state; and how inter-Room communication enables multi-hop meshes.
+This document specifies the Agent Relay Protocol (AGRP), a switching fabric and workspace infrastructure for autonomous agent meshes. AGRP defines how agents, humans, and client bridges connect to Workspaces; how Rooms relay messages between participants; how a Control Plane manages topology, workspace lifecycle, and routing state; and how inter-Room communication enables multi-hop meshes.
 
-ARP operates at the **communication and infrastructure layer** — below the semantics of agent collaboration (A2A) and above the mechanics of tool access (MCP) and editor integration (ACP). It provides the managed topology, workspace lifecycle, and message routing that these protocols do not address.
+AGRP operates at the **communication and infrastructure layer** — below the semantics of agent collaboration (A2A) and above the mechanics of tool access (MCP) and editor integration (ACP). It provides the managed topology, workspace lifecycle, and message routing that these protocols do not address.
 
-ARP is to agent meshes what a telephone switching network is to voice communication: a universal, topology-agnostic fabric that routes messages between participants without knowledge of their content.
+AGRP is to agent meshes what a telephone switching network is to voice communication: a universal, topology-agnostic fabric that routes messages between participants without knowledge of their content.
 
 ---
 
@@ -74,14 +74,14 @@ ARP is to agent meshes what a telephone switching network is to voice communicat
 
 AI agents increasingly operate in multi-agent, multi-human systems. Several protocols have emerged to address different layers of the agentic stack, most now maturing under open governance. However, none define a **switching fabric** — a managed infrastructure where agents and humans are organized into workspaces, connected by routable topology, with lifecycle management, audit, and multi-client access.
 
-### 1.1 Protocol Landscape (March 2026)
+### 1.1 Protocol Landscape
 
-| Protocol | Governed By | Scope | What It Solves |
-|---|---|---|---|
-| **MCP** (Model Context Protocol) | AAIF / Linux Foundation (Anthropic, Nov 2024) | Agent ↔ Tools/Data | Standardized access to external tools, data sources, and resources via JSON-RPC. 10,000+ published servers, 97M+ monthly SDK downloads. |
-| **ACP** (Agent Client Protocol) | Zed Industries + JetBrains | Editor ↔ Agent | Editor-to-coding-agent communication via JSON-RPC over stdio. Analogous to LSP for AI agents. Session management, streaming, file system access, terminal operations. |
-| **A2A** (Agent2Agent Protocol) | Linux Foundation (Google, Apr 2025; v0.3 Jul 2025) | Agent ↔ Agent | Peer-to-peer agent collaboration via HTTP/SSE/JSON-RPC/gRPC. Agent Cards for capability discovery, task lifecycle, multimodal negotiation. 150+ supporting organizations. |
-| **AGENTS.md** | AAIF / Linux Foundation (OpenAI, Aug 2025) | Agent ↔ Repository | Project-specific instructions for coding agents. 60,000+ open-source projects. |
+| Protocol | Scope | What It Solves |
+|---|---|---|
+| **MCP** (Model Context Protocol) | Agent ↔ Tools/Data | Standardized access to external tools, data sources, and resources. |
+| **ACP** (Agent Client Protocol) | Editor ↔ Agent | Editor-to-agent communication, session management, and interactive coding workflows. |
+| **A2A** (Agent2Agent Protocol) | Agent ↔ Agent | Peer-to-peer agent collaboration, capability discovery, and task exchange. |
+| **AGENTS.md** | Agent ↔ Repository | Repository-local instructions and behavioral guidance for agents. |
 
 ### 1.2 The Gap
 
@@ -93,7 +93,7 @@ None of these protocols address:
 - **Multi-hop relay** — how a message traverses multiple Rooms without hardcoded addressing
 - **Broadcast and fan-out** — how an agent's response reaches all human participants in a workspace
 
-MCP connects agents to tools. ACP connects editors to agents. A2A enables agent-to-agent collaboration. **ARP provides the infrastructure mesh beneath all of them.**
+MCP connects agents to tools. ACP connects editors to agents. A2A enables agent-to-agent collaboration. **AGRP provides the infrastructure mesh beneath all of them.**
 
 ### 1.3 Position in the Agentic Stack
 
@@ -105,10 +105,10 @@ MCP connects agents to tools. ACP connects editors to agents. A2A enables agent-
 │  A2A — Agent-to-agent collaboration             │
 │  (Task lifecycle, Agent Cards, negotiation)      │
 ├─────────────────────────────────────────────────┤
-│  ARP — Switching Fabric + Workspaces            │
+│  AGRP — Switching Fabric + Workspaces            │
 │  (Rooms, routing, lifecycle, audit)  ◄── THIS   │
 ├─────────────────────────────────────────────────┤
-│  ASP — ARP Session Protocol                     │
+│  ASP — AGRP Session Protocol                     │
 │  (JSON-RPC sessions, envelopes, heartbeat)       │
 ├─────────────────────────────────────────────────┤
 │  Transport (gRPC / WebSocket / TCP)             │
@@ -126,11 +126,11 @@ MCP connects agents to tools. ACP connects editors to agents. A2A enables agent-
 
 An agent is a logical autonomous worker addressed by name within the mesh; resolution is handled by the Room and Control Plane.
 
-In ARP v1, every agent participates through a **1:1 attached sidecar** that connects to the Room, invokes or polls the agent through a local adapter, and emits ASP messages on the agent's behalf. The sidecar is an implementation detail of the agent runtime and is not exposed to users as a separate participant identity.
+In AGRP v1, every agent participates through a **1:1 attached sidecar** that connects to the Room, invokes or polls the agent through a local adapter, and emits ASP messages on the agent's behalf. The sidecar is an implementation detail of the agent runtime and is not exposed to users as a separate participant identity.
 
-An agent is instantiated with a **harness** — a configuration bundle specifying the model, provider, tools, skills, and behavioral constraints. The harness is opaque to the protocol; ARP treats it as metadata stored in the Control Plane and passed to the Runtime Lifecycle Manager at spawn time.
+An agent is instantiated with a **harness** — a configuration bundle specifying the model, provider, tools, skills, and behavioral constraints. The harness is opaque to the protocol; AGRP treats it as metadata stored in the Control Plane and passed to the Runtime Lifecycle Manager at spawn time.
 
-Agents may use ACP, MCP, A2A, or other local execution interfaces through their sidecar/runtime adapter. ARP is concerned only with routing, policy, and workspace topology, not with how the agent executes its local work.
+Agents may use ACP, MCP, A2A, or other local execution interfaces through their sidecar/runtime adapter. AGRP is concerned only with routing, policy, and workspace topology, not with how the agent executes its local work.
 
 ### 2.1.1 Agent Sidecar
 
@@ -138,14 +138,14 @@ An agent sidecar is a child transport adapter managed alongside exactly one agen
 
 - Terminates ASP on behalf of its parent agent
 - Translates between ASP and the agent's local interface (ACP, stdio, HTTP, SDK, queue, or similar)
-- Invokes or polls the agent and returns replies, tool proposals, approvals, and failures
+- Invokes or polls the agent and returns replies, protocol-level requests that need Room mediation, and failures
 - Verifies received signed mandates and enforces them locally on delegated requests
 
 Agents do not send unsolicited ASP protocol messages in v1. They reply only when invoked or polled by their sidecar.
 
 ### 2.2 Room
 
-A Room is a process or pod that acts as a **switching node** in the mesh. It is the fundamental routing unit of the ARP fabric. A Room:
+A Room is a process or pod that acts as a **switching node** in the mesh. It is the fundamental routing unit of the AGRP fabric. A Room:
 
 - Accepts ASP connections from agent sidecars, humans, client bridges, and peer Rooms
 - Maintains a local routing table pushed by the Control Plane
@@ -158,7 +158,7 @@ This last property is the key architectural insight: **Room-to-Room communicatio
 
 ### 2.3 Workspace
 
-A Workspace is the primary user-facing abstraction in ARP. It is a **managed collaboration unit** that bundles:
+A Workspace is the primary user-facing abstraction in AGRP. It is a **managed collaboration unit** that bundles:
 
 - **A Room** — the underlying switching node
 - **An Environment Resource Service** — an abstract provider of context, environment resources, and workspace information
@@ -197,7 +197,7 @@ The Control Plane is a Raft-replicated cluster responsible for:
 - **Membership and authorization** — enforcing workspace-local roles (`owner`, `admin`, `member`) and optional opaque IAM payloads on sessions and mandates
 - **Cluster federation** — managing inter-cluster links for mesh-of-meshes
 
-The Control Plane is **not** in the data path. It configures routing state, but message forwarding happens directly between Rooms. If the Control Plane becomes temporarily unavailable, Rooms continue forwarding using their last known routing state — providing **fault tolerance by design**. Base authorization in ARP is workspace-local; deployments may attach opaque IAM payloads to sessions and mandates for policy enrichment, but this RFC does not standardize their schema. Direct resource targeting is restricted to `owner` and `admin` members in base ARP and is proxied by the Room to the Environment/Resource service.
+The Control Plane is **not** in the data path. It configures routing state, but message forwarding happens directly between Rooms. If the Control Plane becomes temporarily unavailable, Rooms continue forwarding using their last known routing state — providing **fault tolerance by design**. Base authorization in AGRP is workspace-local; deployments may attach opaque IAM payloads to sessions and mandates for policy enrichment, but this RFC does not standardize their schema. Direct resource targeting is restricted to `owner` and `admin` members in base AGRP and is proxied by the Room to the Environment/Resource service.
 
 ### 2.6 Runtime Lifecycle Manager (RLM)
 
@@ -215,7 +215,7 @@ The RLM is pluggable — the protocol is agnostic to the underlying runtime. The
 
 ### 3.1 Layered Model
 
-ARP defines three planes:
+AGRP defines three planes:
 
 | Plane | Components | Analogy |
 |---|---|---|
@@ -281,11 +281,11 @@ Rooms forward messages autonomously using their local table. If the Control Plan
 
 ---
 
-## 4. ARP Session Protocol (ASP)
+## 4. AGRP Session Protocol (ASP)
 
 ### 4.1 Design Principles
 
-ASP is ARP's native session protocol. It is a bidirectional JSON-RPC 2.0 protocol that runs over gRPC, WebSocket, or raw TCP. ASP is purpose-built for Room-based switching with:
+ASP is AGRP's native session protocol. It is a bidirectional JSON-RPC 2.0 protocol that runs over gRPC, WebSocket, or raw TCP. ASP is purpose-built for Room-based switching with:
 
 - **Connection initialization** with capability negotiation
 - **Session multiplexing** — multiple logical sessions over one connection
@@ -331,11 +331,11 @@ The `role` field indicates participant type:
 | `room` | Peer Room (inter-Room link) |
 | `rlm` | Runtime Lifecycle Manager |
 
-Rooms treat all roles uniformly for message forwarding. The role is metadata for fan-out rules, observability, and authorization policy — not routing. The attached sidecar is modeled as an internal child session, but the Room projects it as the parent logical `agent` participant. Because every agent is sidecar-backed in ARP v1, transport-mode negotiation is not required in ASP session setup.
+Rooms treat all roles uniformly for message forwarding. The role is metadata for fan-out rules, observability, and authorization policy — not routing. The attached sidecar is modeled as an internal child session, but the Room projects it as the parent logical `agent` participant. Because every agent is sidecar-backed in AGRP v1, transport-mode negotiation is not required in ASP session setup.
 
 ### 4.3 Message Envelope
 
-All messages routed through ARP use a common envelope:
+All messages routed through AGRP use a common envelope:
 
 ```json
 {
@@ -343,7 +343,7 @@ All messages routed through ARP use a common envelope:
   "method": "asp/message",
   "params": {
     "id": "msg-uuid-001",
-    "from": "itbaron",
+    "from": "user1",
     "to": "claude",
     "type": "text",
     "ttl": 8,
@@ -361,15 +361,16 @@ Fields:
 | `id` | yes | Unique message identifier (UUID) |
 | `correlation_id` | correlated flows only | Shared identifier linking related request, chunk, result, end, and approval messages |
 | `from` | yes | Sender identity (agent name, human username, bridge ID) |
-| `to` | except `room_message` | Destination: local agent name, `arp://namespace/workspace/agent`, `resource://namespace/workspace/resource`, `*` for broadcast, or `role:...` for role-based fan-out |
+| `to` | except `room_message` | Destination: local agent name, `arl://namespace/workspace/agent`, `resource://namespace/workspace/resource`, `*` for broadcast, or `role:...` for role-based fan-out |
 | `source_workspace` | cross-workspace only | Source workspace identifier (`namespace/name`) |
 | `destination_workspace` | cross-workspace only | Destination workspace identifier (`namespace/name`) |
+| `room_src` | inter-Room forwarding only | Identifier of the Room that last forwarded the envelope, used for traceability and trust decisions |
 | `mandate` | delegated sidecar and direct resource requests | Inline signed claim object issued and signed by the current Room for local enforcement, always including an expiry |
 | `type` | yes | Message type (see §4.4) |
 | `ttl` | yes | Time-to-live, decremented at each Room hop. Dropped at 0. |
-| `payload` | yes | Opaque to ARP. Application-level content. |
+| `payload` | yes | Opaque to AGRP. Application-level content. |
 
-For same-workspace traffic bound to a single session workspace, `source_workspace` and `destination_workspace` MAY be omitted. When omitted, the Room resolves both values from the session workspace context. For cross-workspace traffic, both fields MUST be present. ASP field names shown in this RFC use `snake_case`. At minimum, a signed `mandate` binds the subject, workspace, resource scope, and expiry, where scope is either an explicit resource set or `*` for all resources in scope. Related `resource_call`, `resource_chunk`, `resource_result`, `resource_end`, and approval messages reuse the same `correlation_id`.
+For same-workspace traffic bound to a single session workspace, `source_workspace` and `destination_workspace` MAY be omitted. When omitted, the Room resolves both values from the session workspace context. For cross-workspace traffic, both fields MUST be present. During inter-Room forwarding, `room_src` MUST be present and identify the forwarding Room that placed the envelope on the current Room-to-Room hop. ASP field names shown in this RFC use `snake_case`. At minimum, a signed `mandate` binds the subject, workspace, resource scope, and expiry, where scope is either an explicit resource set or `*` for all resources in scope. Related `resource_call`, `resource_chunk`, `resource_result`, `resource_end`, and approval messages reuse the same `correlation_id`.
 
 ### 4.4 Message Types
 
@@ -381,20 +382,21 @@ For same-workspace traffic bound to a single session workspace, `source_workspac
 | `resource_result` | room → requester | Final or single response for a direct resource request |
 | `resource_chunk` | room → requester | Streaming chunk for a direct resource request when workspace policy enables streaming |
 | `resource_end` | room → requester | Explicit end-of-stream marker for a streamed direct resource request |
-| `approval_request` | agent/room → role:human | Request for human approval with risk level and action description |
-| `approval_response` | human → agent/room | Approve or deny, with approver identity |
+| `approval_request` | room → role:human | Request for human approval with risk level and action description |
+| `approval_response` | human → room | Approve or deny, with approver identity |
+| `approval_denied` | room → requester | Explicit notice that approval was denied under workspace policy or by human decision |
 | `delivery_failure` | room → original sender | Explicit notice that delivery or forwarding failed |
 | `session_event` | room → all | Participant joined, left, or changed status |
 | `routing_update` | cp → room | Routing table push (Control Plane to Room only) |
 
-The `payload` field carries type-specific content. ARP routes all types identically — the type field exists for client rendering and policy enforcement, not for routing decisions. ARP does not define low-level agent execution contracts such as tool invocation or tool result messages. For `resource_call`, the Room acts as a policy-enforcing proxy to the Environment/Resource service.
+The `payload` field carries type-specific content. AGRP routes all types identically — the type field exists for client rendering and policy enforcement, not for routing decisions. AGRP does not define low-level agent execution contracts such as tool invocation or tool result messages. Approval messages in base AGRP are emitted only by the Room for Room-mediated policy gates and are not a generic agent UI primitive. For `resource_call`, the Room acts as a policy-enforcing proxy to the Environment/Resource service.
 
 ### 4.5 Broadcast and Fan-out
 
 A Room implements the following fan-out rules:
 
 - **`to: "agent-name"`** — deliver to the named participant within the local workspace
-- **`to: "arp://namespace/workspace/agent"`** — deliver to the canonical remote participant identified by ARP URI
+- **`to: "arl://namespace/workspace/agent"`** — deliver to the canonical remote participant identified by the canonical agent URI
 - **`to: "resource://namespace/workspace/resource"`** — route a direct resource request through the Room to the Environment/Resource service
 - **`to: "*"`** — deliver to all participants in the workspace
 - **`to: "role:human"`** — deliver to all participants with role `human` or `bridge` (bridges represent human channels)
@@ -406,48 +408,54 @@ When a human or bridge sends a message without an explicit agent target, the Roo
 
 The `role:agent` form is available for explicit system-level fan-out, but human delegation in multi-agent workspaces targets a specific agent URI rather than an agent broadcast.
 
-Direct resource targeting uses `resource://namespace/workspace/resource` URIs. For human participants it is available only to `owner` and `admin` members in base ARP. Agents may also target `resource://` URIs through normal ASP messages.
+Direct resource targeting uses `resource://namespace/workspace/resource` URIs. For human participants it is available only to `owner` and `admin` members in base AGRP. Agents may also target `resource://` URIs, but only through `resource_call`, not through generic `text`.
 
 ### 4.6 Delegation
 
-Delegation is not a separate ASP primitive. A client or bridge delegates by sending a normal `text` message whose `to` field is a specific ARP agent URI such as `arp://myns/myproject/claude`.
+Delegation is not a separate ASP primitive. A client or bridge delegates by sending a normal `text` message whose `to` field is a specific agent URI such as `arl://myns/myproject/claude`.
 
 Delegation carries only the selected message content, not an implicit reference to prior room history. Delegation targets a single agent, and the base workspace default is that any member may delegate unless the workspace policy overrides it.
 
 When a human delegates to a workspace-managed sidecar agent, the Room always attaches an inline signed `mandate` claim that captures the authorized scope for that request. The issuing Room signs the mandate, enforces authorization before issuing it, and the attached sidecar verifies the mandate for local enforcement when invoking the passive agent.
 
-In base ARP v1, mandated delegation targets are workspace-managed sidecar agents.
+In base AGRP v1, mandated delegation targets are workspace-managed sidecar agents.
 
 If an agent or sidecar forwards or re-delegates work, the current Room must mint and sign a reduced-scope mandate rather than reusing the original mandate unchanged.
 
 ### 4.7 Direct Resource Access
 
-Direct resource access is represented as `resource_call` addressed to a `resource://namespace/workspace/resource` URI. For human callers, the Room verifies that the sender is an `owner` or `admin`. For agent callers, the Room evaluates the request against the agent's current mandate and workspace policy. The Room always attaches or propagates a signed mandate, evaluates the separate `resource_approval_policy`, and proxies the request to the Environment/Resource service. The Environment/Resource service verifies the mandate again before execution. Mutating resource operations use the existing `approval_request` / `approval_response` message pair. The service response returns to the requester either as a single `resource_result` or as a stream of `resource_chunk` messages terminated by `resource_end`, depending on workspace configuration.
+Direct resource access is represented as `resource_call` addressed to a `resource://namespace/workspace/resource` URI. `resource://` targets are not valid for generic `text` messages in base AGRP. For human callers, the Room verifies that the sender is an `owner` or `admin`. For agent callers, the Room evaluates the request against the agent's current mandate and workspace policy. The Room always attaches or propagates a signed mandate, evaluates the separate `resource_approval_policy`, and proxies the request to the Environment/Resource service. When the policy requires human approval, the Room emits `approval_request` and applies the resulting `approval_response`; if approval is denied, the Room returns `approval_denied` and does not proxy the call. The Environment/Resource service verifies the mandate again before execution. The service response returns to the requester either as a single `resource_result` or as a stream of `resource_chunk` messages terminated by `resource_end`, depending on workspace configuration.
 
 Mandate expiry is checked when the `resource_call` is admitted. Once a long-running streamed request has started successfully, it is allowed to finish even if the original mandate would expire during the stream.
 
-Cross-workspace `resource_call` is not generally routable in base ARP. It is allowed only across trusted federated links.
+Cross-workspace `resource_call` is not generally routable in base AGRP. It is allowed only across trusted federated links.
 
 ### 4.8 Delivery Failure
 
 If a Room cannot route or deliver a message because of missing routes, insufficient link trust claims, queue exhaustion, or TTL expiry, it emits a `delivery_failure` message back to the original sender or upstream Room.
 
+### 4.8.1 Approval Denied
+
+If a Room-mediated action is rejected by approval policy or by a human approver, the Room emits `approval_denied` to the requester and does not perform the underlying action.
+
 ### 4.9 Approval Flow
 
-Operations that require human approval follow a structured flow routed through the Room:
+Operations that require human approval follow a structured flow coordinated by the Room:
 
 ```
-Agent                    Room                    Humans
+Requester                Room                    Humans
   |                        |                        |
-  |─ approval_request ───→|                        |
-  |  { action: "mutating  |─ fan-out to ──────────→|
-  |    resource access",  |  role:human             |
-  |    risk: "high" }     |                        |
+  |─ operation request ──→|                        |
+  |                        |─ approval_request ───→|
+  |                        |  { action: "mutating   |
+  |                        |    resource access",   |
+  |                        |    risk: "high" }      |
   |                        |                        |
   |                        |←── approval_response ──|
   |                        |    { approved: true,    |
-  |←── approval_response ──|      approver: "itbaron" }
-  |    (routed back)       |                        |
+  |                        |      approver: "user1" }
+  |←─ routed result / ────|                        |
+  |   policy decision      |                        |
 ```
 
 The Room enforces workspace-level approval policy:
@@ -456,11 +464,11 @@ The Room enforces workspace-level approval policy:
 - **What requires approval** — based on risk classification
 - **How many approvals** — single approver or quorum (configurable per workspace)
 
-The approval policy is workspace metadata managed by the Control Plane. The Room enforces it; the agent proposes operations without knowledge of the policy.
+The approval policy is workspace metadata managed by the Control Plane. The Room enforces it and emits the approval messages defined by AGRP.
 
-Any follow-up execution or completion reporting happens through normal ARP messages such as `text` or `resource_result`, or through implementation-specific agent-local contracts outside ARP.
+Any follow-up execution or completion reporting happens through normal AGRP messages such as `text` or `resource_result`, or through implementation-specific agent-local contracts outside AGRP. If approval is denied, the requester receives `approval_denied`.
 
-For cross-workspace operations in v1, approval is governed by the **source workspace** policy. The destination Room trusts the forwarded approval decision if the inter-Room link negotiated the required trust claim during connection setup.
+For cross-workspace operations in v1, approval is governed by the **source workspace** policy. The explicit exception is `resource_call`: when a cross-workspace `resource_call` is permitted, approval is governed by the destination workspace's `resource_approval_policy`. The destination Room trusts forwarded approval decisions only when the inter-Room link negotiated the required trust claim during connection setup.
 
 ---
 
@@ -562,11 +570,11 @@ workspaces:
           protocol: acp
           visibility: hidden
     members:
-      itbaron:
+      user1:
         role: owner
         joined: "2026-03-08T14:00:00Z"
-        iam_session: opaque://iam/itbaron
-      it-baron:
+        iam_session: opaque://iam/user1
+      user2:
         role: admin
         joined: "2026-03-08T14:10:00Z"
     channels:
@@ -596,15 +604,15 @@ rooms:
     status: healthy
     participants:
       - { name: claude, role: agent }
-      - { name: itbaron, role: human }
-      - { name: it-baron, role: human, via: telegram }
+      - { name: user1, role: human }
+      - { name: user2, role: human, via: telegram }
       - { name: telegram-bridge-01, role: bridge }
 
 routes:
   room-7a3f:
     claude: local
-    itbaron: local
-    it-baron: local (via telegram-bridge-01)
+    user1: local
+    user2: local (via telegram-bridge-01)
 
 links: {}
 ```
@@ -626,40 +634,40 @@ links:
 routes:
   room-7a3f:
     claude: local
-    arp://myns/infra/infra-agent: via room-9b2c
+    arl://myns/infra/infra-agent: via room-9b2c
   room-9b2c:
     infra-agent: local
-    arp://myns/myproject/claude: via room-7a3f
+    arl://myns/myproject/claude: via room-7a3f
 ```
 
 ---
 
 ## 7. Agent Addressing
 
-Agents and participants are addressed either by local logical name or by canonical ARP URI. Resolution is handled by the Room using its local routing table.
+Agents and participants are addressed either by local logical name or by a canonical agent URI. Resolution is handled by the Room using its local routing table.
 
 ### 7.1 Addressing Schemes
 
 | Form | Example | Usage |
 |---|---|---|
 | **Local** | `claude` | Resolved only within the local workspace |
-| **ARP URI** | `arp://myns/infra/infra-agent` | Route to a specific agent in a specific workspace |
+| **Agent URI** | `arl://myns/infra/infra-agent` | Route to a specific agent in a specific workspace |
 | **Resource URI** | `resource://myns/myproject/root` | Route a direct resource request through the Room to the Environment/Resource service |
 | **Role-based** | `role:human` | Fan-out to all participants matching the role |
 | **Broadcast** | `*` | Fan-out to all participants in the workspace |
 
-Agents may use local names only for same-workspace delivery. Cross-workspace delivery uses canonical ARP URIs. Direct resource access uses `resource://` URIs. Role-based and broadcast addressing are used for fan-out within a workspace.
+Agents may use local names only for same-workspace delivery. Cross-workspace delivery uses canonical agent URIs. Direct resource access uses `resource://` URIs. Role-based and broadcast addressing are used for fan-out within a workspace.
 
 ### 7.2 Cross-Workspace Addressing
 
 When agent `claude` in `myns/myproject` needs to reach `infra-agent` in `myns/infra`:
 
-1. Claude sends: `{ to: "arp://myns/infra/infra-agent", payload: ... }`
-2. Room A looks up routing table: `arp://myns/infra/infra-agent → via room-9b2c`
+1. Claude sends: `{ to: "arl://myns/infra/infra-agent", payload: ... }`
+2. Room A looks up routing table: `arl://myns/infra/infra-agent → via room-9b2c`
 3. Room A forwards via its ASP session with Room B
 4. Room B delivers locally to `infra-agent`
 
-The Control Plane pre-provisions remote routes keyed by canonical ARP URI. Rooms do not perform implicit cross-workspace resolution from simple names.
+The Control Plane pre-provisions remote routes keyed by the canonical agent URI. Rooms do not perform implicit cross-workspace resolution from simple names.
 
 ---
 
@@ -679,18 +687,19 @@ Every Room writes messages to an append-only audit log persisted by the Control 
 | `payload_hash` | Hash of payload (or full payload, configurable) |
 | `approval` | Approver identity and decision, if applicable |
 
-An implementation may expose the audit log through a CLI, API, or UI. An illustrative excerpt:
+Approval decisions, including denied actions, are logged as first-class events. An implementation may expose the audit log through a CLI, API, or UI. An illustrative excerpt:
 
 ```
-14:01  itbaron    "review the current architecture"
+14:01  user1      "review the current architecture"
 14:02  claude     "summarized the topology and open questions"
-14:05  itbaron    "prepare an update for the validation rules"
+14:05  user1      "prepare an update for the validation rules"
 14:09  claude     "draft update ready for review"
-14:15  it-baron   "connect a Telegram channel to this workspace"
+14:15  user2      "connect a Telegram channel to this workspace"
 14:16  system     session_event telegram-bridge-01 joined
-14:30  claude     approval_request "mutating resource access"
-14:31  it-baron   approval_response approved
-15:10  itbaron    "delegate follow-up work to infra-agent"
+14:30  room       approval_request "mutating resource access"
+14:31  user2      approval_response denied
+14:31  room       approval_denied "mutating resource access"
+15:10  user1      "delegate follow-up work to infra-agent"
 15:11  room       delivery_failure route unavailable
 ```
 
@@ -702,18 +711,18 @@ The audit log persists across suspend and resume for human review, debugging, an
 
 ### 9.1 Rooms as ASP Participants
 
-The defining property of ARP is that **a Room is an ASP participant**. Room B joins Room A exactly as any other participant would. From Room A's perspective, there is no difference between a human user, a peer Room, or the RLM; all are participants with ASP sessions. An agent reaches the Room through its attached sidecar but is represented to the Room as the logical `agent` participant. This unification eliminates the need for a separate inter-Room protocol and enables recursive composition.
+The defining property of AGRP is that **a Room is an ASP participant**. Room B joins Room A exactly as any other participant would. From Room A's perspective, there is no difference between a human user, a peer Room, or the RLM; all are participants with ASP sessions. An agent reaches the Room through its attached sidecar but is represented to the Room as the logical `agent` participant. This unification eliminates the need for a separate inter-Room protocol and enables recursive composition.
 
 ### 9.2 Message Forwarding Flow
 
 When `claude` in Room A sends a message to `infra-agent` in Room B:
 
 ```
-1. claude sends:    { to: "arp://myns/infra/infra-agent", payload: ... }
+1. claude sends:    { to: "arl://myns/infra/infra-agent", payload: ... }
 2. Room A looks up local routing table
-3. Table says:      arp://myns/infra/infra-agent → Room B
+3. Table says:      arl://myns/infra/infra-agent → Room B
 4. Room A forwards via its ASP session with Room B:
-   { from: "claude", to: "arp://myns/infra/infra-agent",
+   { from: "claude", to: "arl://myns/infra/infra-agent",
      source_workspace: "myns/myproject",
      destination_workspace: "myns/infra",
      room_src: "room-7a3f", ttl: 7, payload: ... }
@@ -736,7 +745,7 @@ Forwarded approval decisions, mandate propagation, and other trust-sensitive ope
 
 When delegation crosses Room boundaries, the current forwarding Room must issue any new mandate using reduced scope relative to the upstream request context.
 
-Cross-workspace `resource_call` follows a stricter rule: it is allowed only across trusted federated links and remains governed by the destination workspace's `resource_approval_policy`.
+Cross-workspace `resource_call` follows a stricter rule: it is allowed only across trusted federated links and is the explicit exception to the normal cross-workspace approval rule, remaining governed by the destination workspace's `resource_approval_policy`.
 
 ---
 
@@ -758,7 +767,7 @@ Multiple clusters within the same organization are federated by linking boundary
 
 ### 10.2 Cross-Organization Federation via A2A
 
-For cross-organization federation where the peer may not run ARP, boundary Rooms can expose A2A-compatible endpoints. The Room acts as a reverse proxy, translating between A2A HTTP discovery / task management and ASP:
+For cross-organization federation where the peer may not run AGRP, boundary Rooms can expose A2A-compatible endpoints. The Room acts as a reverse proxy, translating between A2A HTTP discovery / task management and ASP:
 
 ```
 External A2A Client
@@ -774,7 +783,7 @@ External A2A Client
     |←── A2A Response (proxied) ───────────|
 ```
 
-This allows ARP-hosted agents to participate in the broader A2A ecosystem without requiring external systems to adopt ARP.
+This allows AGRP-hosted agents to participate in the broader A2A ecosystem without requiring external systems to adopt AGRP.
 
 This section is informative only. It does not define a normative interoperability profile.
 
@@ -782,9 +791,9 @@ This section is informative only. It does not define a normative interoperabilit
 
 ## 11. Relationship to Kubernetes
 
-ARP is intentionally analogous to Kubernetes but for agent communication rather than container orchestration:
+AGRP is intentionally analogous to Kubernetes but for agent communication rather than container orchestration:
 
-| Kubernetes | ARP | Key Difference |
+| Kubernetes | AGRP | Key Difference |
 |---|---|---|
 | Namespace | Namespace | Identical concept |
 | Deployment | Workspace | Workspace includes environment, members, channels |
@@ -796,22 +805,20 @@ ARP is intentionally analogous to Kubernetes but for agent communication rather 
 | kubelet | RLM | RLM is pluggable (k8s, fork, serverless) |
 | NetworkPolicy | Approval policy | Policy enforced per-workspace with human-in-the-loop |
 
-The critical difference: Kubernetes delegates networking to CNI and treats it as transparent infrastructure. ARP treats the **communication fabric as the primary primitive**. The network is not transparent — it is the product.
+The critical difference: Kubernetes delegates networking to CNI and treats it as transparent infrastructure. AGRP treats the **communication fabric as the primary primitive**. The network is not transparent — it is the product.
 
 ---
 
-## 12. Relationship to the Agentic AI Foundation (AAIF)
+## 12. Relationship to Adjacent Protocols
 
-The AAIF, launched in December 2025 under the Linux Foundation by Anthropic, Block, and OpenAI (with support from Google, Microsoft, AWS, and others), provides neutral governance for foundational agentic AI projects including MCP, goose, and AGENTS.md. Google's A2A protocol is separately governed under the Linux Foundation.
+AGRP is designed to be **compatible with and complementary to** these protocols:
 
-ARP is designed to be **compatible with and complementary to** these protocols:
-
-- **MCP:** Agents within an ARP workspace freely use MCP to access tools and data. The Room does not interfere with MCP connections. An MCP server can be co-located with the workspace environment for shared tool access.
-- **A2A:** Boundary Rooms expose A2A-compatible endpoints for interoperability. A2A messages between mesh-hosted agents are transparently relayed through the ARP fabric.
-- **AGENTS.md:** Agent configuration (including AGENTS.md conventions) is orthogonal to ARP. The RLM may use AGENTS.md to configure spawned agents.
+- **MCP:** Agents within an AGRP workspace freely use MCP to access tools and data. The Room does not interfere with MCP connections. An MCP server can be co-located with the workspace environment for shared tool access.
+- **A2A:** Boundary Rooms expose A2A-compatible endpoints for interoperability. A2A messages between mesh-hosted agents are transparently relayed through the AGRP fabric.
+- **AGENTS.md:** Agent configuration (including AGENTS.md conventions) is orthogonal to AGRP. The RLM may use AGENTS.md to configure spawned agents.
 - **ACP:** Agents that are ACP-compatible coding agents (e.g., Claude Code, Gemini CLI) can be spawned inside a workspace and connected to an editor via an ACP bridge. The bridge translates ACP's stdio JSON-RPC into ASP sessions.
 
-ARP does not seek to replace any of these protocols. It provides the managed infrastructure mesh beneath them.
+AGRP does not seek to replace any of these protocols. It provides the managed infrastructure mesh beneath them.
 
 ---
 
@@ -821,10 +828,10 @@ The following topics require further specification:
 
 - **Companion ASP RFC:** The separate ASP specification still needs the full JSON-RPC method catalog, error codes, schemas, and negotiation details.
 - **IAM payload schema:** Optional IAM enrichment on sessions and mandates is supported conceptually, but the payload schema and propagation rules are intentionally unspecified.
-- **Trust claim registry:** ARP starts with `forward_messages`, `forward_approvals`, and `forward_mandates`, but it still needs a standard registry and negotiation semantics for future claims.
+- **Trust claim registry:** AGRP starts with `forward_messages`, `forward_approvals`, and `forward_mandates`, but it still needs a standard registry and negotiation semantics for future claims.
 - **Companion Environment/Resource RFC:** The separate environment/resource specification still needs the concrete `resource_call`, `resource_chunk`, and `resource_result` payload schemas, `resource_approval_policy` schema, lifecycle semantics, and required metadata.
-- **Delegation policy overrides:** Base ARP defaults delegation to any member, but the workspace-level override schema is still open.
-- **Capability-based routing extension:** Capability multicast is deferred to a future optional extension and is not part of base ARP.
+- **Delegation policy overrides:** Base AGRP defaults delegation to any member, but the workspace-level override schema is still open.
+- **Capability-based routing extension:** Capability multicast is deferred to a future optional extension and is not part of base AGRP.
 
 ---
 
