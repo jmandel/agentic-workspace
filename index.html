@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Agent Relay Protocol (ARP) RFC Draft</title>
+    <meta
+      name="description"
+      content="Draft RFC for the Agent Relay Protocol (ARP), a switching fabric and workspace infrastructure for agent meshes."
+    >
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f6f4ee;
+        --panel: #fffdf8;
+        --ink: #1f2a37;
+        --muted: #58667a;
+        --line: #d8d3c7;
+        --accent: #14532d;
+        --accent-soft: #e7f5ec;
+        --code: #f4f1e8;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+        background:
+          radial-gradient(circle at top left, #ffffff 0, #ffffff 14rem, transparent 14rem),
+          linear-gradient(180deg, #efe9dc 0, var(--bg) 12rem, var(--bg) 100%);
+        color: var(--ink);
+      }
+
+      a {
+        color: var(--accent);
+      }
+
+      code,
+      pre {
+        font-family: "SFMono-Regular", "Menlo", "Monaco", "Consolas", monospace;
+      }
+
+      .page {
+        max-width: 72rem;
+        margin: 0 auto;
+        padding: 2.5rem 1.25rem 4rem;
+      }
+
+      .hero {
+        padding: 1.5rem;
+        border: 1px solid var(--line);
+        background: rgba(255, 253, 248, 0.92);
+        box-shadow: 0 0.75rem 2rem rgba(31, 42, 55, 0.06);
+      }
+
+      .eyebrow {
+        margin: 0 0 0.5rem;
+        font-size: 0.8rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      .hero h1 {
+        margin: 0;
+        font-size: clamp(2rem, 4vw, 3.5rem);
+        line-height: 1.05;
+      }
+
+      .hero p {
+        margin: 0.75rem 0 0;
+        max-width: 44rem;
+        color: var(--muted);
+      }
+
+      .hero-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-top: 1rem;
+      }
+
+      .hero-links a {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.55rem 0.8rem;
+        border: 1px solid var(--line);
+        background: var(--panel);
+        text-decoration: none;
+      }
+
+      .status {
+        margin: 1rem 0 0;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+
+      .document {
+        margin-top: 1.5rem;
+        padding: 1.75rem;
+        border: 1px solid var(--line);
+        background: var(--panel);
+        box-shadow: 0 1rem 3rem rgba(31, 42, 55, 0.05);
+      }
+
+      .document h1,
+      .document h2,
+      .document h3,
+      .document h4 {
+        line-height: 1.15;
+        scroll-margin-top: 1.5rem;
+      }
+
+      .document h1 {
+        font-size: 2.2rem;
+      }
+
+      .document h2 {
+        margin-top: 2rem;
+        font-size: 1.5rem;
+      }
+
+      .document h3 {
+        margin-top: 1.5rem;
+        font-size: 1.15rem;
+      }
+
+      .document p,
+      .document li {
+        line-height: 1.7;
+      }
+
+      .document table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1.25rem 0;
+        font-size: 0.95rem;
+      }
+
+      .document th,
+      .document td {
+        padding: 0.7rem 0.8rem;
+        border: 1px solid var(--line);
+        vertical-align: top;
+      }
+
+      .document th {
+        background: #f1ece1;
+        text-align: left;
+      }
+
+      .document pre {
+        overflow-x: auto;
+        padding: 1rem;
+        background: var(--code);
+        border: 1px solid var(--line);
+      }
+
+      .document code {
+        padding: 0.12rem 0.3rem;
+        background: var(--code);
+      }
+
+      .document pre code {
+        padding: 0;
+        background: transparent;
+      }
+
+      .document blockquote {
+        margin: 1.25rem 0;
+        padding-left: 1rem;
+        border-left: 0.25rem solid var(--line);
+        color: var(--muted);
+      }
+
+      .document hr {
+        border: 0;
+        border-top: 1px solid var(--line);
+        margin: 2rem 0;
+      }
+
+      .document .mermaid {
+        margin: 1.5rem 0;
+        padding: 1rem;
+        background: var(--accent-soft);
+        border: 1px solid #bad7c4;
+        overflow-x: auto;
+      }
+
+      .error {
+        padding: 1rem;
+        border: 1px solid #d7b4b4;
+        background: #fff1f1;
+        color: #7a2222;
+      }
+
+      @media (max-width: 720px) {
+        .page {
+          padding: 1.25rem 0.75rem 2rem;
+        }
+
+        .hero,
+        .document {
+          padding: 1rem;
+        }
+
+        .document table {
+          display: block;
+          overflow-x: auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero">
+        <p class="eyebrow">GitHub Pages</p>
+        <h1>Agent Relay Protocol (ARP)</h1>
+        <p>
+          Public HTML rendering of the current ARP RFC draft, generated directly from
+          <code>arp-rfc.md</code>.
+        </p>
+        <div class="hero-links">
+          <a href="https://github.com/Agent-Relay-Protocol/arp-rfc">Repository</a>
+          <a href="./arp-rfc.md">Markdown Source</a>
+        </div>
+        <p id="status" class="status">Loading RFC text...</p>
+      </section>
+
+      <article id="content" class="document" aria-live="polite"></article>
+      <noscript>
+        <p class="error">
+          This page renders <code>arp-rfc.md</code> in the browser and requires JavaScript.
+          You can still read the source directly at <a href="./arp-rfc.md">arp-rfc.md</a>.
+        </p>
+      </noscript>
+    </main>
+
+    <script type="module">
+      import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+      import { marked } from "https://cdn.jsdelivr.net/npm/marked/lib/marked.esm.js";
+
+      const content = document.getElementById("content");
+      const status = document.getElementById("status");
+
+      const escapeHtml = (value) =>
+        value
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;");
+
+      const slugify = (value) =>
+        value
+          .toLowerCase()
+          .trim()
+          .replace(/[^\w\s-]/g, "")
+          .replace(/\s+/g, "-")
+          .replace(/-+/g, "-");
+
+      marked.use({
+        gfm: true,
+        renderer: {
+          heading(token) {
+            const html = this.parser.parseInline(token.tokens);
+            const id = slugify(token.text ?? "");
+            return `<h${token.depth} id="${id}">${html}</h${token.depth}>`;
+          },
+          code(token) {
+            const language = (token.lang ?? "").trim();
+            const code = token.text ?? "";
+
+            if (language === "mermaid") {
+              return `<pre class="mermaid">${escapeHtml(code)}</pre>`;
+            }
+
+            const className = language ? ` class="language-${escapeHtml(language)}"` : "";
+            return `<pre><code${className}>${escapeHtml(code)}</code></pre>`;
+          },
+        },
+      });
+
+      try {
+        const response = await fetch("./arp-rfc.md", { cache: "no-store" });
+
+        if (!response.ok) {
+          throw new Error(`Unable to load arp-rfc.md (${response.status})`);
+        }
+
+        const markdown = await response.text();
+        content.innerHTML = marked.parse(markdown);
+
+        mermaid.initialize({
+          startOnLoad: false,
+          securityLevel: "loose",
+          theme: "neutral",
+        });
+
+        await mermaid.run({ querySelector: ".mermaid" });
+        status.textContent = "Rendered from arp-rfc.md";
+      } catch (error) {
+        status.textContent = "Unable to render arp-rfc.md";
+        content.innerHTML = `
+          <div class="error">
+            <p>Failed to render the RFC in the browser.</p>
+            <p><a href="./arp-rfc.md">Open the markdown source</a>.</p>
+            <p><code>${String(error.message ?? error)}</code></p>
+          </div>
+        `;
+      }
+    </script>
+  </body>
+</html>
