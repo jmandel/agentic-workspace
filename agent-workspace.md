@@ -181,33 +181,48 @@ All tool calls go through the workspace runtime, which enforces policy, checks g
 
 ---
 
-## 4. Conversation Model (Open Question)
+## 4. Topics
 
-Every workspace has a shared conversation where all participants — humans and agents — communicate. All messages are persisted, audited, and included in workspace state. The open question is the internal structure of this conversation.
+A workspace contains one or more **topics** — named conversation threads where participants communicate and work. Every workspace starts with a default topic. New topics can be created at any time.
 
-### Option A: Flat Thread
+A topic is a focused conversation between a subset of participants — humans and agents — around a specific subject. All messages within a topic are persisted, audited, and included in workspace state.
 
-One linear conversation thread. All messages from all participants appear in a single stream. Simple, fully transparent, easy to implement.
+### Examples
 
-Works well for small teams and focused tasks. May become noisy when multiple agents work on different subtasks in parallel or when a side discussion is needed without cluttering the main flow.
+A workspace for a payments service might have:
 
-### Option B: Threaded Chat
+- `general` — default topic, high-level coordination
+- `debug-timeout` — an agent investigating a timeout bug
+- `refactor-api` — a human and agent working on API redesign
+- `ci` — automated notifications from CI/CD pipeline
 
-One main thread with the ability to branch into sub-threads from any message — similar to Slack threads. A thread is not a separate resource; it is part of the same conversation and the same audit log.
+### Creating and Joining Topics
 
-The main thread stays clean for high-level updates and decisions. Threads capture focused work: an agent implementing a feature, a debugging session, a review discussion. Participants choose where to follow.
+Any participant can create a topic. Agents can be assigned to topics at creation time or join later. A participant can be active in multiple topics simultaneously.
 
-### Option C: Multiple Topics
+```yaml
+# Create a topic
+topic: debug-timeout
+participants:
+  - agent:claude
+  - alice@acme.com
+```
 
-A workspace contains multiple named topics (or rooms/channels) — similar to a Discord server or Zulip streams. Each topic has its own conversation thread. Participants and agents can join specific topics.
+### API
 
-For example, a workspace could have `#general`, `#frontend`, `#backend`, `#ci-alerts`. An agent working on frontend code posts to `#frontend`; CI notifications go to `#ci-alerts`. Participants subscribe to the topics they care about.
+```
+GET    /apis/v1/namespaces/{ns}/workspaces/{name}/topics              — list topics
+POST   /apis/v1/namespaces/{ns}/workspaces/{name}/topics              — create a topic
+GET    /apis/v1/namespaces/{ns}/workspaces/{name}/topics/{topic}      — get topic details
+DELETE /apis/v1/namespaces/{ns}/workspaces/{name}/topics/{topic}      — archive a topic
+```
 
-This is the most flexible model but also the most complex. It introduces questions around topic management, default visibility, cross-topic references, and which topic an agent should post to when its work spans multiple areas. This model is closer to recreating the Room abstraction we intentionally merged into Workspace.
+Each topic has its own ACP endpoint for real-time communication:
 
-### What We Haven't Decided
+```
+wss://relay.example.com/acp/acme/payments-debug/topics/debug-timeout
+```
 
-- Whether threads are needed in v1 or can be deferred
-- How agents discover and follow threads — do they see all threads by default or subscribe explicitly?
-- Whether a thread can be "promoted" to a standalone workspace (essentially a clone scoped to a thread's context)
-- Message addressing — does `to: "claude"` go to main thread or to the thread where claude is currently active?
+### Relationship to ACP Sessions
+
+Each topic maps to an ACP session. When a client connects to a topic, they join the corresponding session. An agent running in a topic maintains its own conversation context — separate from other topics but sharing the same workspace resources.
