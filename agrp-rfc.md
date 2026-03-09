@@ -243,6 +243,38 @@ Non-normative examples:
 
 The exact file layout, FUSE binding, sync model, chroot/sync-root configuration, and read/write mapping for a filesystem-backed bridge are implementation-specific. AGRP only standardizes the Exchange-facing side: the bridge emits and receives AGSP messages.
 
+#### 2.4.3 FUSE Bridge Working Example
+
+Non-normative example for a local filesystem bridge rooted at `/mnt/agrp/myns/myproject`:
+
+```mermaid
+sequenceDiagram
+    participant U as User or IDE
+    participant FS as FUSE Mount
+    participant BR as Local FS Bridge
+    participant EX as Exchange
+    participant SC as Agent Sidecar
+    participant AG as Agent
+
+    U->>FS: write outbox/claude.md
+    FS->>BR: file write event within sync root
+    BR->>EX: text to claude
+    EX->>SC: text + signed mandate
+    SC->>AG: ACP delegated request
+    AG-->>SC: ACP reply
+    SC-->>EX: text to role:human
+    EX-->>BR: text reply
+    BR-->>FS: update conversation/inbox.md
+    U->>FS: read conversation/inbox.md
+```
+
+Mental model for this example:
+
+- the mounted directory is only a local projection rooted at the configured sync directory
+- writing `outbox/claude.md` does not talk to the agent directly; it causes the bridge to emit an AGSP `text` message
+- the Exchange still attaches mandates, applies routing, and enforces policy
+- the reply comes back through normal AGSP routing and is projected by the bridge into a file such as `conversation/inbox.md`
+
 ### 2.5 Control Plane
 
 The Control Plane is a Raft-replicated cluster responsible for:
