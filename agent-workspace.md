@@ -58,6 +58,22 @@ Bob gets a notification, opens his IDE, and connects to the workspace. He opens 
 
 **Later** — The incident postmortem links to the workspace. New team members can clone it as a training exercise. The workspace identity `payments-outage.acme@relay.example.com` is in the audit log, showing every tool call, every approval, every action taken.
 
+### Building together
+
+It's Wednesday. Alice is starting a new payments API.
+
+She creates a workspace with two topics — `scaffold` where an agent starts generating the service skeleton, and `spec` where she drafts the API design. While the agent writes boilerplate, Alice focuses on the interface contract.
+
+An hour in, she hits a design question — how to handle idempotency for partial refunds. The agent has opinions based on the codebase patterns, Alice has opinions based on the business rules, but neither approach feels right. She invites Carol, who has deep domain expertise in payment processing:
+
+```
+ws invite payments-api carol@acme.com
+```
+
+Carol joins from her IDE, reads through the agent's scaffolded code and Alice's spec, and proposes an elegant approach they both missed — an event-sourced model that handles partial refunds naturally. The agent picks it up, refactors the code, Alice and Carol review together. Three participants — two humans, one agent — each contributing what they do best: the agent writes fast and knows the codebase, Alice brings architecture vision, Carol brings domain expertise.
+
+By end of day, the API is designed, implemented, and tested. Alice commits the workspace. Anyone onboarding to this service later can clone it and see not just the code, but the entire creative process — why decisions were made, what alternatives were considered, and how the design evolved.
+
 This is what a multiplayer agent environment looks like.
 
 ---
