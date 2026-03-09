@@ -24,19 +24,43 @@ interface Workspace {
 const workspaces = new Map<string, Workspace>();
 let nextPort = PORT_RANGE_START;
 
+// --- Credentials ---
+
+async function getClaudeToken(): Promise<string | null> {
+  // Read OAuth token from macOS keychain
+  const proc = Bun.spawn({
+    cmd: ["security", "find-generic-password", "-s", "Claude Code-credentials", "-w"],
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const out = await new Response(proc.stdout).text();
+  const code = await proc.exited;
+  if (code !== 0) return null;
+  try {
+    const creds = JSON.parse(out.trim());
+    return creds.claudeAiOauth?.accessToken || null;
+  } catch {
+    return null;
+  }
+}
+
 // --- Docker helpers ---
 
 async function dockerRun(name: string, port: number): Promise<string> {
+  const token = await getClaudeToken();
+  const cmd = [
+    "docker", "run", "-d",
+    "--name", `agrp-ws-${name}`,
+    "-p", `${port}:31337`,
+    "-e", `WORKSPACE_NAME=${name}`,
+  ];
+  if (token) {
+    cmd.push("-e", `ANTHROPIC_API_KEY=${token}`);
+  }
+  cmd.push("--label", "agrp=workspace", IMAGE);
+
   const proc = Bun.spawn({
-    cmd: [
-      "docker", "run", "-d",
-      "--name", `agrp-ws-${name}`,
-      "-p", `${port}:31337`,
-      "-e", `WORKSPACE_NAME=${name}`,
-      "-e", `ANTHROPIC_API_KEY=${process.env.ANTHROPIC_API_KEY || ""}`,
-      "--label", "agrp=workspace",
-      IMAGE,
-    ],
+    cmd,
     stdout: "pipe",
     stderr: "pipe",
   });

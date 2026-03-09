@@ -6,9 +6,13 @@
     "wmlet": "bun run wmlet.ts",
     "manager": "bun run wsmanager.ts",
     "dev:wmlet": "bun --watch run wmlet.ts",
-    "dev:manager": "bun --watch run wsmanager.ts"
+    "dev:manager": "bun --watch run wsmanager.ts",
+    "ws": "bun run cli.ts"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@agentclientprotocol/sdk": "^0.15.0",
+    "@zed-industries/claude-agent-acp": "^0.21.0"
+  },
   "private": true,
   "devDependencies": {
     "@types/bun": "latest"
