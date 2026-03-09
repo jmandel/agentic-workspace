@@ -30,23 +30,29 @@ Imagine all of this already exists. What does a typical day look like?
 
 It's Monday morning. Alice is the on-call engineer for the payments team at Acme.
 
-**9:02 AM** — A PagerDuty alert fires: payment timeouts are spiking. Alice opens her terminal and creates a workspace:
+**9:02 AM** — A PagerDuty alert fires: payment timeouts are spiking. PagerDuty sends a webhook to the workspace manager. A workspace `payments-outage` spins up automatically — the payments repo mounted at `/code`, two topics created from the incident template: `debug-timeout` with a Claude agent prompted to find the root cause, and `investigate-logs` with another agent analyzing log patterns for anomalies. Both agents start working immediately, with no human present.
+
+**9:08 AM** — Alice gets the PagerDuty page, opens her terminal and connects:
 
 ```
-ws create payments-outage debug-timeout investigate-logs
+ws connect payments-outage debug-timeout
 ```
 
-A workspace spins up with the payments repo mounted at `/code`, two topics ready — `debug-timeout` with a Claude agent, and `investigate-logs` with another. Both agents share the same codebase but work independently.
+The agent has already been working for six minutes. Alice sees the full conversation history — the agent has checked recent deployments, identified a suspicious PR, and is currently reading the diff. She scrolls through the findings and types: "Good lead on PR #847. Focus on the connection pool timeout change."
 
-**9:04 AM** — Alice connects to `debug-timeout` and types: "Payment API response times jumped from 200ms to 5s in the last 10 minutes. Find the root cause." The agent starts reading code, checking recent commits, and running queries. Meanwhile, the agent in `investigate-logs` is already analyzing log patterns — Alice had pre-configured it with a system prompt to look for anomalies.
+**9:12 AM** — Alice invites Bob, another engineer, to help:
 
-**9:12 AM** — Bob, another engineer, sees the incident channel and joins the same workspace from his IDE. He opens `investigate-logs` to see what that agent found, then creates a new topic: "Bob here, check if the connection pool config changed recently." A fresh agent picks this up.
+```
+ws invite payments-outage bob@acme.com
+```
 
-**9:18 AM** — The agent in `debug-timeout` reports: "Found it. PR #847 merged Friday changed the connection pool timeout from 30s to 3s. Under load, connections are being dropped before queries complete." Alice reviews the evidence, then types: "Prepare a revert PR."
+Bob gets a notification, opens his IDE, and connects to the workspace. He opens `investigate-logs` to see what that agent found, then creates a new topic: "Check if the connection pool config changed in the infrastructure layer too." A fresh agent picks this up.
 
-**9:20 AM** — The agent needs to push to GitHub. Alice's workspace has GitHub connected with a policy: creating PRs is allowed, but pushing requires approval. The agent creates the PR and Alice approves the push with one click.
+**9:15 AM** — The agent in `debug-timeout` confirms: "PR #847 merged Friday changed the connection pool timeout from 30s to 3s. Under load, connections are being dropped before queries complete." Alice reviews the evidence, then types: "Prepare a revert PR."
 
-**9:25 AM** — CI passes. Alice merges. The timeout spike starts recovering.
+**9:17 AM** — The agent needs to push to GitHub. Alice's workspace has GitHub connected with a policy: creating PRs is allowed, but pushing requires approval. The agent creates the PR and Alice approves the push with one click.
+
+**9:22 AM** — CI passes. Alice merges. The timeout spike starts recovering.
 
 **9:30 AM** — Alice commits the workspace state — a snapshot of the full conversation, agent actions, and files. Now anyone investigating the incident later can clone this workspace and see exactly what happened, what the agents found, and why decisions were made.
 
