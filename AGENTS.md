@@ -4,6 +4,7 @@
 This repository contains the Agentic Workspace protocol spec and a reference implementation.
 
 - `agent-workspace.md` — protocol spec (draft)
+- `rfcs/` — focused protocol RFCs that refine the draft spec
 - `index.html` — browser-rendered spec page
 - `reference-impl/` — reference implementation (bun + docker)
   - `wsmanager.ts` — workspace manager, REST API, launches docker containers

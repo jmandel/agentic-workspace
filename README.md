@@ -5,6 +5,7 @@ Protocol and reference implementation for agentic workspaces — environments wh
 ## Repository Layout
 
 - [agent-workspace.md](./agent-workspace.md) — the protocol spec (draft)
+- [rfcs/](./rfcs/) — focused protocol RFCs that refine or extend the draft spec
 - [reference-impl/](./reference-impl/) — reference implementation (bun + docker)
 - [index.html](./index.html) — browser-rendered spec
 - [LICENSE](./LICENSE) — MIT license
