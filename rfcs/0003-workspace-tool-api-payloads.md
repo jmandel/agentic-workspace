@@ -69,6 +69,15 @@ DELETE /tools/{tool}/grants/{grantId}
 
 These routes are relative to the workspace runtime base.
 
+The public API is a workspace contract. An implementation may satisfy that
+contract by:
+
+- executing the registered transport directly inside the workspace runtime
+- brokering tool execution through a privileged manager while keeping the public
+  transport shape stable
+
+The client-visible payloads do not change between those implementation choices.
+
 ## Tool Create Request
 
 `POST /tools` must accept:
@@ -212,8 +221,15 @@ Optional:
 - `env`
 - `cwd`
 
-The command runs inside the isolated workspace runtime, not on the manager
-host. If `cwd` is relative, it resolves from the workspace root.
+The registered transport describes the workspace-visible binding. An
+implementation may execute it inside the workspace runtime or may broker it
+through a manager. In both cases:
+
+- `cwd`, when relative, resolves from the workspace root
+- absolute runtime paths such as `/tools/...` are interpreted relative to the
+  workspace runtime filesystem contract
+- secret-bearing environment values must not be exposed back to workspace
+  clients through `GET /tools`
 
 Demo-proven example:
 
@@ -221,12 +237,16 @@ Demo-proven example:
 {
   "type": "stdio",
   "command": "bun",
-  "args": ["./.demo/hl7-jira-mcp.js"],
-  "cwd": "."
+  "args": ["/tools/hl7-jira-support/bin/hl7-jira-mcp.js"],
+  "cwd": "/tools/hl7-jira-support",
+  "env": {
+    "HL7_JIRA_DB": "/tools/hl7-jira-support/data/jira-data.db"
+  }
 }
 ```
 
-This shape is useful for workspace-local MCP fixtures and wrapper scripts.
+This shape is useful both for workspace-local MCP fixtures and for
+manager-brokered MCP servers that rely on manager-published support bundles.
 
 ### MCP streamable HTTP
 

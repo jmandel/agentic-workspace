@@ -112,7 +112,8 @@ Clients submit prompts with:
 {
   "type": "prompt",
   "promptId": "p_123",
-  "data": "Please debug the timeout"
+  "data": "Please debug the timeout",
+  "position": 0
 }
 ```
 
@@ -120,6 +121,8 @@ Rules:
 - `promptId` is required
 - `promptId` must be unique within the current topic session from that client
 - the runtime echoes the same `promptId` on all prompt-scoped events
+- `position` is optional; if present, `0` means insert before the first queued
+  prompt
 
 ### `approval_response`
 
@@ -176,7 +179,8 @@ The runtime must emit prompt lifecycle updates:
   "eventId": "e_45",
   "timestamp": "2026-03-10T12:00:02Z",
   "promptId": "p_123",
-  "status": "accepted"
+  "status": "accepted",
+  "data": "Please debug the timeout"
 }
 ```
 
@@ -184,12 +188,16 @@ Allowed `status` values for the demo:
 - `accepted`
 - `queued`
 - `started`
+- `completed`
 - `cancelled`
+- `failed`
 
 Rules:
 - every prompt must produce `accepted`
 - prompts submitted while another prompt is active must also produce `queued`
 - when the runtime begins executing the prompt, it must emit `started`
+- `accepted` should include the submitted prompt content in `data` so live
+  participants can see what was just submitted without waiting for replay
 
 ### `text`
 
@@ -219,10 +227,21 @@ Tool invocation start:
   "promptId": "p_123",
   "toolCallId": "tc_123",
   "tool": "bash",
-  "title": "bash",
-  "status": "pending"
+  "title": "Running fhir-validator",
+  "kind": "execute",
+  "status": "pending",
+  "rawInput": {"command": "fhir-validator input/examples/Patient-bp.json"}
 }
 ```
+
+Rules:
+- `promptId` should be present whenever the runtime can associate the tool call
+  with a submitted prompt, which the Shelley demo runtime does
+- `kind` categorizes the tool operation (aligns with ACP `ToolKind`); allowed
+  values: `read`, `edit`, `delete`, `execute`, `search`, `think`, `fetch`,
+  `other`; defaults to `other` if omitted
+- `rawInput` is optional; when present it carries the tool input parameters as a
+  JSON object (aligns with ACP `rawInput`); runtimes may truncate large values
 
 ### `tool_update`
 
@@ -242,11 +261,15 @@ Tool progress/result update:
 ```
 
 Rules:
-- `status` must be one of `running`, `completed`, or `failed`
-- `data` is optional text for the demo
+- `status` must be one of `in_progress`, `completed`, or `failed` (aligns with
+  ACP `ToolCallStatus`)
+- `promptId` should be present whenever the runtime can associate the tool event
+  with a submitted prompt, which the Shelley demo runtime does
+- `data` is the canonical human-readable tool progress/result text for the demo
 - structured or binary tool payloads are out of scope for this contract
-- for compatibility with thin clients that only render `text`, a runtime may
-  also emit a `text` event containing the same human-readable tool result
+- the demo profile must not emit a duplicate `text` event containing the same
+  human-readable tool result; clients should render tool output from
+  `tool_update.data`
 
 ### `approval_request`
 
@@ -309,6 +332,7 @@ Allowed `status` values:
 - `completed`
 - `failed`
 - `cancelled`
+- `interrupted`
 
 Every prompt must end with exactly one `done`.
 
@@ -327,6 +351,8 @@ Prompt-scoped error:
 ```
 
 For the demo:
+- `promptId` is optional; when absent, the error applies to the topic session
+  rather than one prompt
 - `error` may appear before `done`
 - if `error` is emitted for a prompt, that prompt must still end with `done`
   using `status: "failed"`

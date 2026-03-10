@@ -97,21 +97,15 @@ GET /apis/v1/namespaces/{ns}/workspaces/{name}
     ],
     "guidance": "Use via bash to validate generated FHIR artifacts.",
     "requirements": ["java"],
-    "version": "demo"
+    "version": "6.8.2"
   },
   {
-    "name": "ig-publisher",
+    "name": "hl7-jira-support",
     "kind": "local_tool",
-    "exposure": "bash_only",
-    "description": "FHIR IG Publisher available inside the workspace runtime",
-    "commands": [
-      {
-        "name": "ig-publisher",
-        "command": "/tools/bin/ig-publisher"
-      }
-    ],
-    "guidance": "Use via bash to run a local IG Publisher build.",
-    "version": "demo"
+    "exposure": "support_bundle",
+    "description": "Support bundle containing the Bun entrypoint and real HL7 Jira SQLite snapshot used by the manager-brokered MCP tool.",
+    "requirements": ["bun"],
+    "version": "2026-01-22"
   }
 ]
 ```
@@ -122,14 +116,17 @@ Required fields:
 - `kind`
 - `exposure`
 - `description`
-- `commands`
 
 Rules:
 
 - `kind` is `local_tool` for this contract
-- `exposure` is `bash_only` for the demo
+- `exposure` may be:
+  - `bash_only`
+  - `support_bundle`
+- `commands` is required for `bash_only`
+- `commands` is optional for `support_bundle`
 - `commands` is the user/model-facing command metadata the manager promises to
-  make available inside enabled workspaces
+  make available inside enabled workspaces when the local tool is bash-visible
 - `guidance` is optional but strongly recommended
 - `requirements` is optional descriptive metadata for runtime dependencies such
   as `java`
@@ -168,6 +165,8 @@ Rules:
 For the demo:
 
 - `fhir-validator` is selected this way
+- `hl7-jira-support` is also selected this way when the demo enables the Jira
+  MCP tool
 - optional `ig-publisher` can be added later the same way
 
 ## Workspace Detail Shape
@@ -196,6 +195,12 @@ Example:
           }
         ],
         "guidance": "Use via bash to validate generated FHIR artifacts."
+      },
+      {
+        "name": "hl7-jira-support",
+        "kind": "local_tool",
+        "exposure": "support_bundle",
+        "description": "Support bundle for the manager-brokered HL7 Jira MCP tool."
       }
     ]
   }
@@ -222,6 +227,7 @@ Managed tools created with `POST /tools` are still for:
 So:
 
 - `fhir-validator` -> local tool catalog + workspace runtime selection
+- `hl7-jira-support` -> local tool catalog + workspace runtime selection
 - `hl7-jira` -> managed tool API
 
 ## Runtime Expectations
@@ -230,8 +236,16 @@ When a workspace enables a local tool, the manager is responsible for:
 
 - making the advertised commands available inside the isolated runtime
 - ensuring those commands match the catalog metadata
-- generating workspace guidance so Shelley knows the tool exists and how to use
-  it through bash
+- generating workspace guidance for `bash_only` tools so Shelley knows the tool
+  exists and how to use it through bash
+
+For `support_bundle` tools, the manager is responsible for:
+
+- mounting the bundle at a stable runtime path such as `/tools/{name}`
+- keeping the bundle out of Shelley’s bash guidance unless it is also intended
+  to be directly invoked from bash
+- making it possible for manager-brokered tools to reference files inside the
+  bundle using stable runtime paths
 
 In practice, the manager may satisfy this using a mix of:
 
@@ -242,7 +256,10 @@ Example:
 
 - `fhir-validator` may be a selected mounted local tool
 - `java` may come from the base runtime image or read-only runtime mounts
-- the client still selects only `fhir-validator`
+- `hl7-jira-support` may mount a Bun MCP script plus a real SQLite database at
+  `/tools/hl7-jira-support/...`
+- the client still selects `fhir-validator` and/or `hl7-jira-support`, not
+  their transitive runtime dependencies
 
 The protocol does not standardize how the manager accomplishes this.
 
@@ -257,9 +274,11 @@ Allowed implementation strategies include:
 
 For the demo:
 
-- `GET /apis/v1/local-tools` advertises at least `fhir-validator`
-- workspace creation selects `runtime.localTools: ["fhir-validator"]`
-- workspace detail shows resolved local tool metadata
+- `GET /apis/v1/local-tools` advertises at least `fhir-validator` and
+  `hl7-jira-support`
+- workspace creation selects `runtime.localTools: ["fhir-validator",
+  "hl7-jira-support"]`
+- workspace detail shows resolved local tool metadata for both
 - `hl7-jira` is separately registered through `POST /tools`
 
 This gives the audience a clear story:

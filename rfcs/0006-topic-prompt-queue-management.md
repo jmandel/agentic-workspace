@@ -65,7 +65,7 @@ Each prompt becomes a queue entry:
   "sessionId": "s_123",
   "status": "queued",
   "submittedBy": {
-    "kind": "user",
+    "kind": "participant",
     "id": "priya@example.com"
   },
   "text": "Search HL7 Jira for Observation.component slicing issues.",
@@ -85,9 +85,11 @@ Optional but recommended:
 - `sessionId`
 - `position`
 
-For the first version, `text` may be stored verbatim because prompts are still
-text-only. If later content becomes multi-part, this field should become
-structured content.
+For the first version, queue resources may store `text` verbatim because prompts
+are still text-only. On the mutation and event wire, this RFC uses `data` for
+the edited prompt content so queue mutations match the realtime event payloads.
+If later content becomes multi-part, this field should become structured
+content.
 
 ## Prompt Status Values
 
@@ -196,7 +198,7 @@ Example:
     {
       "promptId": "p_121",
       "status": "queued",
-      "submittedBy": { "kind": "user", "id": "marco@example.com" },
+      "submittedBy": { "kind": "participant", "id": "marco@example.com" },
       "text": "Search HL7 Jira for similar slicing issues.",
       "createdAt": "2026-03-10T12:00:01Z",
       "position": 1
@@ -204,7 +206,7 @@ Example:
     {
       "promptId": "p_122",
       "status": "queued",
-      "submittedBy": { "kind": "user", "id": "priya@example.com" },
+      "submittedBy": { "kind": "participant", "id": "priya@example.com" },
       "text": "Re-run validation after the fix.",
       "createdAt": "2026-03-10T12:00:02Z",
       "position": 2
@@ -334,7 +336,7 @@ Returns the current active prompt plus queued entries:
     {
       "promptId": "p_121",
       "status": "queued",
-      "submittedBy": { "kind": "user", "id": "marco@example.com" },
+      "submittedBy": { "kind": "participant", "id": "marco@example.com" },
       "text": "Search HL7 Jira for similar slicing issues.",
       "createdAt": "2026-03-10T12:00:01Z",
       "position": 1
@@ -361,13 +363,13 @@ Request body:
 
 ```json
 {
-  "text": "Search HL7 Jira for Observation.component slicing and validator errors."
+  "data": "Search HL7 Jira for Observation.component slicing and validator errors."
 }
 ```
 
 Responses:
 - `200 OK` with the updated queue snapshot
-- `400` if `text` is missing or empty
+- `400` if `data` is missing or empty
 - `403` if the caller may not edit it
 - `409` if the prompt has already started and is no longer mutable
 - `404` if the prompt does not exist

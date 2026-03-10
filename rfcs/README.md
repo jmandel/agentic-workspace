@@ -15,3 +15,5 @@ Current RFCs:
 - [0004-approval-workflow-semantics.md](./0004-approval-workflow-semantics.md)
 - [0005-local-tool-catalog.md](./0005-local-tool-catalog.md)
 - [0006-topic-prompt-queue-management.md](./0006-topic-prompt-queue-management.md)
+- [0007-active-turn-injection-and-interruption.md](./0007-active-turn-injection-and-interruption.md)
+- [0009-manager-lifecycle-notifications.md](./0009-manager-lifecycle-notifications.md)

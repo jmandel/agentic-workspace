@@ -13,6 +13,10 @@
  *   ws move-queue <name> <topic> <promptId> <up|down|top|bottom>
  *                                   — reorder one of my queued prompts
  *   ws clear-queue <name> <topic>   — clear my queued prompts
+ *   ws inject <name> <topic> <text...>
+ *                                   — inject guidance into the active turn
+ *   ws interrupt <name> <topic> <reason...>
+ *                                   — interrupt the active turn
  *   ws connect <name> [topic]       — connect to topic (default: general)
  *   ws health                       — manager health
  */
@@ -120,7 +124,7 @@ async function editQueue(name: string, topic = "general", promptId?: string, tex
       ...requestHeaders(),
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ text }),
+    body: JSON.stringify({ data: text }),
   });
   if (data.error) { console.error("Error:", data.error); process.exit(1); }
   printQueueSnapshot(data);
@@ -142,6 +146,42 @@ async function moveQueue(name: string, topic = "general", promptId?: string, dir
   });
   if (data.error) { console.error("Error:", data.error); process.exit(1); }
   printQueueSnapshot(data);
+}
+
+async function inject(name: string, topic = "general", text?: string) {
+  if (!name || !text) {
+    console.error("Usage: ws inject <workspace> <topic> <text...>");
+    process.exit(1);
+  }
+  const base = await wsApi(name);
+  const data = await api(`${base}/topics/${encodeURIComponent(topic)}/inject`, {
+    method: "POST",
+    headers: {
+      ...requestHeaders(),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ data: text }),
+  });
+  if (data.error) { console.error("Error:", data.error); process.exit(1); }
+  console.log(`Inject accepted: ${data.injectId}`);
+}
+
+async function interrupt(name: string, topic = "general", reason?: string) {
+  if (!name || !reason) {
+    console.error("Usage: ws interrupt <workspace> <topic> <reason...>");
+    process.exit(1);
+  }
+  const base = await wsApi(name);
+  const data = await api(`${base}/topics/${encodeURIComponent(topic)}/interrupt`, {
+    method: "POST",
+    headers: {
+      ...requestHeaders(),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ reason }),
+  });
+  if (data.error) { console.error("Error:", data.error); process.exit(1); }
+  console.log(`Interrupted: ${data.promptId} (${data.reason || data.status})`);
 }
 
 async function list() {
@@ -209,6 +249,7 @@ async function connect(name: string, topic = "general") {
   const socket = new WebSocket(acpUrl);
   let connected = false;
   const nextPromptId = nextPromptIdFactory();
+  const nextInjectId = nextPromptIdFactory();
   const promptStates = new Map<string, string>();
   const ownPrompts: string[] = [];
   const ownQueuedPromptIds = () => ownPrompts.filter((candidate) => promptStates.get(candidate) === "queued");
@@ -221,7 +262,7 @@ async function connect(name: string, topic = "general") {
         break;
       case "connected":
         connected = true;
-        console.log(`\x1b[32mConnected to topic "${msg.topic}" (session ${msg.sessionId})\x1b[0m`);
+        console.log(`\x1b[32mConnected to topic "${msg.topic}" (session ${msg.sessionId}, ${msg.protocolVersion || "unknown"})\x1b[0m`);
         console.log(`Type a message and press Enter. /quit to disconnect.\n`);
         promptInput();
         break;
@@ -230,7 +271,17 @@ async function connect(name: string, topic = "general") {
         break;
       case "prompt_status":
         promptStates.set(msg.promptId, msg.status);
-        console.log(`\x1b[90m[prompt] ${msg.promptId} ${msg.status}${msg.position ? ` (#${msg.position})` : ""}\x1b[0m`);
+        console.log(`\x1b[90m[prompt] ${msg.promptId} ${msg.status}${msg.position ? ` (#${msg.position})` : ""}${msg.data ? `: ${msg.data}` : ""}\x1b[0m`);
+        break;
+      case "inject_status":
+        console.log(`\x1b[90m[inject] ${msg.injectId} ${msg.status}${msg.reason ? ` (${msg.reason})` : ""}\x1b[0m`);
+        break;
+      case "user":
+        if (msg.injected) {
+          console.log(`\x1b[35m[inject:${msg.injectId || "?"}] ${msg.data}\x1b[0m`);
+        } else {
+          console.log(`\x1b[36m[user] ${msg.data}\x1b[0m`);
+        }
         break;
       case "text":
         process.stdout.write(msg.data);
@@ -239,12 +290,17 @@ async function connect(name: string, topic = "general") {
         console.log(`\x1b[33m[tool] ${msg.title} (${msg.status})\x1b[0m`);
         break;
       case "tool_update":
-        if (msg.status === "completed") {
-          console.log(`\x1b[33m[tool] ${msg.title || msg.toolCallId} done\x1b[0m`);
+        console.log(`\x1b[33m[tool] ${msg.title || msg.toolCallId} ${msg.status || "updated"}\x1b[0m`);
+        if (msg.data) {
+          console.log(msg.data);
         }
         break;
       case "done":
-        console.log(`\n\x1b[90m---\x1b[0m`);
+        if (msg.status === "interrupted") {
+          console.log(`\n\x1b[90m--- interrupted ${msg.promptId || ""}${msg.reason ? `: ${msg.reason}` : ""}\x1b[0m`);
+        } else {
+          console.log(`\n\x1b[90m--- ${msg.status || "done"} ${msg.promptId || ""}\x1b[0m`);
+        }
         promptInput();
         break;
       case "error":
@@ -329,7 +385,7 @@ async function connect(name: string, topic = "general") {
         ...requestHeaders(),
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ text }),
+      body: JSON.stringify({ data: text }),
     });
     if (data.error) {
       console.error(`\x1b[31m[error] ${data.error}\x1b[0m`);
@@ -372,6 +428,22 @@ async function connect(name: string, topic = "general") {
     console.log(`\x1b[90m[queue] cleared ${removed.length} prompt(s)\x1b[0m`);
   }
 
+  function sendPrompt(text: string, position?: number) {
+    const promptId = nextPromptId();
+    ownPrompts.push(promptId);
+    promptStates.set(promptId, "accepted");
+    socket.send(JSON.stringify({ type: "prompt", promptId, data: text, ...(position === undefined ? {} : { position }) }));
+  }
+
+  function sendInject(text: string) {
+    const injectId = nextInjectId().replace(/^p_/, "inj_");
+    socket.send(JSON.stringify({ type: "inject", injectId, data: text }));
+  }
+
+  function sendInterrupt(reason: string) {
+    socket.send(JSON.stringify({ type: "interrupt", reason }));
+  }
+
   const decoder = new TextDecoder();
   for await (const chunk of Bun.stdin.stream()) {
     const lines = decoder.decode(chunk).split("\n").filter(Boolean);
@@ -406,6 +478,21 @@ async function connect(name: string, topic = "general") {
         promptInput();
         continue;
       }
+      if (text.startsWith("/inject ")) {
+        sendInject(text.slice("/inject ".length).trim());
+        promptInput();
+        continue;
+      }
+      if (text.startsWith("/interrupt ")) {
+        sendInterrupt(text.slice("/interrupt ".length).trim());
+        promptInput();
+        continue;
+      }
+      if (text.startsWith("/next ")) {
+        sendPrompt(text.slice("/next ".length).trim(), 0);
+        promptInput();
+        continue;
+      }
       if (text.startsWith("/up ")) {
         await movePrompt(text.slice("/up ".length).trim(), "up");
         promptInput();
@@ -432,10 +519,7 @@ async function connect(name: string, topic = "general") {
         continue;
       }
       if (!connected) continue;
-      const promptId = nextPromptId();
-      ownPrompts.push(promptId);
-      promptStates.set(promptId, "accepted");
-      socket.send(JSON.stringify({ type: "prompt", promptId, data: text }));
+      sendPrompt(text);
     }
   }
 }
@@ -469,6 +553,12 @@ switch (cmd) {
   case "clear-queue":
     await clearQueue(args[0], args[1]);
     break;
+  case "inject":
+    await inject(args[0], args[1], args.slice(2).join(" ").trim());
+    break;
+  case "interrupt":
+    await interrupt(args[0], args[1], args.slice(2).join(" ").trim());
+    break;
   case "connect":
   case "c":
     await connect(args[0], args[1]);
@@ -490,6 +580,10 @@ Commands:
   move-queue <name> <topic> <promptId> <up|down|top|bottom>
                              Reorder one of your queued prompts
   clear-queue <name> <topic> Clear my queued prompts for a topic
+  inject <name> <topic> <text...>
+                             Inject guidance into the active turn
+  interrupt <name> <topic> <reason...>
+                             Interrupt the active turn
   connect <name> [topic]     Connect to topic (default: general)
   health                     Manager health`);
 }
