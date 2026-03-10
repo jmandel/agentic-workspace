@@ -10,7 +10,7 @@
  *   ws queue <name> <topic>         — show topic queue
  *   ws edit-queue <name> <topic> <promptId> <text...>
  *                                   — edit one of my queued prompts
- *   ws move-queue <name> <topic> <promptId> <up|down|top>
+ *   ws move-queue <name> <topic> <promptId> <up|down|top|bottom>
  *                                   — reorder one of my queued prompts
  *   ws clear-queue <name> <topic>   — clear my queued prompts
  *   ws connect <name> [topic]       — connect to topic (default: general)
@@ -128,7 +128,7 @@ async function editQueue(name: string, topic = "general", promptId?: string, tex
 
 async function moveQueue(name: string, topic = "general", promptId?: string, direction?: string) {
   if (!name || !promptId || !direction) {
-    console.error("Usage: ws move-queue <workspace> <topic> <promptId> <up|down|top>");
+    console.error("Usage: ws move-queue <workspace> <topic> <promptId> <up|down|top|bottom>");
     process.exit(1);
   }
   const base = await wsApi(name);
@@ -338,7 +338,7 @@ async function connect(name: string, topic = "general") {
     printQueueSnapshot(data);
   }
 
-  async function movePrompt(target: string, direction: "up" | "down" | "top") {
+  async function movePrompt(target: string, direction: "up" | "down" | "top" | "bottom") {
     const promptId = resolveQueuedPrompt(target);
     if (!promptId) {
       console.error(`\x1b[31m[error] no queued prompt to move\x1b[0m`);
@@ -421,6 +421,11 @@ async function connect(name: string, topic = "general") {
         promptInput();
         continue;
       }
+      if (text.startsWith("/bottom ")) {
+        await movePrompt(text.slice("/bottom ".length).trim(), "bottom");
+        promptInput();
+        continue;
+      }
       if (text === "/whoami") {
         console.log(`participant ${WS_CLIENT_ID}`);
         promptInput();
@@ -482,7 +487,7 @@ Commands:
   queue <name> <topic>       Show topic queue
   edit-queue <name> <topic> <promptId> <text...>
                              Edit one of your queued prompts
-  move-queue <name> <topic> <promptId> <up|down|top>
+  move-queue <name> <topic> <promptId> <up|down|top|bottom>
                              Reorder one of your queued prompts
   clear-queue <name> <topic> Clear my queued prompts for a topic
   connect <name> [topic]     Connect to topic (default: general)

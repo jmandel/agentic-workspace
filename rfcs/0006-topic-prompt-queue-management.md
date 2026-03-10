@@ -132,6 +132,7 @@ Reordering semantics:
 - `move up` swaps a queued entry with the one immediately ahead of it
 - `move down` swaps a queued entry with the one immediately behind it
 - `move top` moves a queued entry to position `1`
+- `move bottom` moves a queued entry to the last queued position
 - moving past the queue bounds is a no-op that still returns the current queue
   state
 
@@ -387,6 +388,7 @@ Allowed `direction` values:
 - `up`
 - `down`
 - `top`
+- `bottom`
 
 Responses:
 - `200 OK` with the updated queue snapshot
