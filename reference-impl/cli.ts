@@ -8,6 +8,10 @@
  *   ws delete <name>                — delete workspace
  *   ws topics <name>                — list topics in workspace
  *   ws queue <name> <topic>         — show topic queue
+ *   ws edit-queue <name> <topic> <promptId> <text...>
+ *                                   — edit one of my queued prompts
+ *   ws move-queue <name> <topic> <promptId> <up|down|top>
+ *                                   — reorder one of my queued prompts
  *   ws clear-queue <name> <topic>   — clear my queued prompts
  *   ws connect <name> [topic]       — connect to topic (default: general)
  *   ws health                       — manager health
@@ -104,6 +108,42 @@ async function clearQueue(name: string, topic = "general") {
   }
 }
 
+async function editQueue(name: string, topic = "general", promptId?: string, text?: string) {
+  if (!name || !promptId || !text) {
+    console.error("Usage: ws edit-queue <workspace> <topic> <promptId> <text...>");
+    process.exit(1);
+  }
+  const base = await wsApi(name);
+  const data = await api(`${base}/topics/${encodeURIComponent(topic)}/queue/${encodeURIComponent(promptId)}`, {
+    method: "PATCH",
+    headers: {
+      ...requestHeaders(),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ text }),
+  });
+  if (data.error) { console.error("Error:", data.error); process.exit(1); }
+  printQueueSnapshot(data);
+}
+
+async function moveQueue(name: string, topic = "general", promptId?: string, direction?: string) {
+  if (!name || !promptId || !direction) {
+    console.error("Usage: ws move-queue <workspace> <topic> <promptId> <up|down|top>");
+    process.exit(1);
+  }
+  const base = await wsApi(name);
+  const data = await api(`${base}/topics/${encodeURIComponent(topic)}/queue/${encodeURIComponent(promptId)}/move`, {
+    method: "POST",
+    headers: {
+      ...requestHeaders(),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ direction }),
+  });
+  if (data.error) { console.error("Error:", data.error); process.exit(1); }
+  printQueueSnapshot(data);
+}
+
 async function list() {
   const data = await managerApi("/workspaces");
   if (!data.length) { console.log("No workspaces."); return; }
@@ -171,6 +211,7 @@ async function connect(name: string, topic = "general") {
   const nextPromptId = nextPromptIdFactory();
   const promptStates = new Map<string, string>();
   const ownPrompts: string[] = [];
+  const ownQueuedPromptIds = () => ownPrompts.filter((candidate) => promptStates.get(candidate) === "queued");
 
   socket.onmessage = (e) => {
     const msg = JSON.parse(e.data);
@@ -217,6 +258,12 @@ async function connect(name: string, topic = "general") {
       case "queue_entry_removed":
         console.log(`\x1b[90m[queue] removed ${msg.promptId} (${msg.reason || "removed"})\x1b[0m`);
         break;
+      case "queue_entry_updated":
+        console.log(`\x1b[90m[queue] updated ${msg.promptId} (#${msg.position || "?"})\x1b[0m`);
+        break;
+      case "queue_entry_moved":
+        console.log(`\x1b[90m[queue] moved ${msg.promptId} ${msg.direction || ""} (#${msg.position || "?"})\x1b[0m`);
+        break;
       case "queue_cleared":
         console.log(`\x1b[90m[queue] cleared ${Array.isArray(msg.removed) ? msg.removed.join(", ") : ""}\x1b[0m`);
         break;
@@ -246,7 +293,7 @@ async function connect(name: string, topic = "general") {
   async function cancelPrompt(id: string) {
     let promptId = id;
     if (promptId === "last") {
-      const pending = ownPrompts.filter((candidate) => promptStates.get(candidate) === "queued");
+      const pending = ownQueuedPromptIds();
       promptId = pending[pending.length - 1];
       if (!promptId) {
         console.error(`\x1b[31m[error] no queued prompt to cancel\x1b[0m`);
@@ -262,6 +309,54 @@ async function connect(name: string, topic = "general") {
       return;
     }
     console.log(`\x1b[90m[queue] cancel requested for ${promptId}\x1b[0m`);
+  }
+
+  function resolveQueuedPrompt(target: string) {
+    if (target !== "last") return target;
+    const pending = ownQueuedPromptIds();
+    return pending[pending.length - 1] || "";
+  }
+
+  async function editPrompt(target: string, text: string) {
+    const promptId = resolveQueuedPrompt(target);
+    if (!promptId) {
+      console.error(`\x1b[31m[error] no queued prompt to edit\x1b[0m`);
+      return;
+    }
+    const data = await api(`${apiBase}/topics/${encodeURIComponent(topic)}/queue/${encodeURIComponent(promptId)}`, {
+      method: "PATCH",
+      headers: {
+        ...requestHeaders(),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ text }),
+    });
+    if (data.error) {
+      console.error(`\x1b[31m[error] ${data.error}\x1b[0m`);
+      return;
+    }
+    printQueueSnapshot(data);
+  }
+
+  async function movePrompt(target: string, direction: "up" | "down" | "top") {
+    const promptId = resolveQueuedPrompt(target);
+    if (!promptId) {
+      console.error(`\x1b[31m[error] no queued prompt to move\x1b[0m`);
+      return;
+    }
+    const data = await api(`${apiBase}/topics/${encodeURIComponent(topic)}/queue/${encodeURIComponent(promptId)}/move`, {
+      method: "POST",
+      headers: {
+        ...requestHeaders(),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ direction }),
+    });
+    if (data.error) {
+      console.error(`\x1b[31m[error] ${data.error}\x1b[0m`);
+      return;
+    }
+    printQueueSnapshot(data);
   }
 
   async function clearMine() {
@@ -299,6 +394,33 @@ async function connect(name: string, topic = "general") {
         promptInput();
         continue;
       }
+      if (text.startsWith("/edit ")) {
+        const rest = text.slice("/edit ".length).trim();
+        const splitAt = rest.indexOf(" ");
+        if (splitAt <= 0) {
+          console.error(`\x1b[31m[error] usage: /edit <promptId|last> <text>\x1b[0m`);
+          promptInput();
+          continue;
+        }
+        await editPrompt(rest.slice(0, splitAt), rest.slice(splitAt + 1).trim());
+        promptInput();
+        continue;
+      }
+      if (text.startsWith("/up ")) {
+        await movePrompt(text.slice("/up ".length).trim(), "up");
+        promptInput();
+        continue;
+      }
+      if (text.startsWith("/top ")) {
+        await movePrompt(text.slice("/top ".length).trim(), "top");
+        promptInput();
+        continue;
+      }
+      if (text.startsWith("/down ")) {
+        await movePrompt(text.slice("/down ".length).trim(), "down");
+        promptInput();
+        continue;
+      }
       if (text === "/whoami") {
         console.log(`participant ${WS_CLIENT_ID}`);
         promptInput();
@@ -333,6 +455,12 @@ switch (cmd) {
   case "queue":
     await queue(args[0], args[1]);
     break;
+  case "edit-queue":
+    await editQueue(args[0], args[1], args[2], args.slice(3).join(" ").trim());
+    break;
+  case "move-queue":
+    await moveQueue(args[0], args[1], args[2], args[3]);
+    break;
   case "clear-queue":
     await clearQueue(args[0], args[1]);
     break;
@@ -352,6 +480,10 @@ Commands:
   delete <name>              Delete workspace
   topics <name>              List topics in workspace
   queue <name> <topic>       Show topic queue
+  edit-queue <name> <topic> <promptId> <text...>
+                             Edit one of your queued prompts
+  move-queue <name> <topic> <promptId> <up|down|top>
+                             Reorder one of your queued prompts
   clear-queue <name> <topic> Clear my queued prompts for a topic
   connect <name> [topic]     Connect to topic (default: general)
   health                     Manager health`);

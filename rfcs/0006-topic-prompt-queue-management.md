@@ -11,8 +11,10 @@ It defines:
 - explicit queued prompt objects
 - prompt ownership
 - queue lifecycle events
+- queued-prompt editing
+- queued-prompt reordering
 - cancellation of queued prompts before they start
-- minimal REST surfaces for queue inspection and removal
+- minimal REST surfaces for queue inspection and mutation
 
 It does not attempt to solve true simultaneous multiplayer turns. It defines a
 better shared queue model for the existing "one active turn per topic" runtime.
@@ -43,6 +45,9 @@ The protocol must expose:
 - queued prompts behind it
 - the ability for a submitter to cancel their own queued prompts while they are
   still queued
+- the ability for a submitter to edit the text of their own queued prompts
+- the ability for a submitter to move their own queued prompts up or down in
+  the waiting list
 - the ability for a submitter to clear all of their own queued prompts for a
   topic
 
@@ -106,22 +111,40 @@ Meaning:
 - every prompt produces `accepted`
 - only prompts that are not immediately started produce `queued`
 
-## Ownership and Cancellation Rules
+## Ownership and Queue Mutation Rules
 
 Queue ownership comes from authenticated connection context.
 
 Clients must not supply `submittedBy` inline in websocket or REST mutations.
 
 Rules:
-- a queued prompt may be cancelled only while its status is `queued`
-- the prompt submitter may cancel their own queued prompt
-- privileged moderators or workspace admins may cancel any queued prompt
+- a queued prompt may be edited, moved, or cancelled only while its status is
+  `queued`
+- the prompt submitter may edit, move, or cancel their own queued prompt
+- privileged moderators or workspace admins may edit, move, or cancel any
+  queued prompt
 - once a prompt reaches `started`, it is no longer removable through queue
-  cancellation and must be handled by normal turn cancellation semantics if the
+  mutation and must be handled by normal turn cancellation semantics if the
   runtime supports that separately
 
-For demo implementations with weak auth, ownership may still be coarse, but the
-protocol shape should assume real subject identity.
+Reordering semantics:
+- the first queued entry has position `1`
+- `move up` swaps a queued entry with the one immediately ahead of it
+- `move down` swaps a queued entry with the one immediately behind it
+- `move top` moves a queued entry to position `1`
+- moving past the queue bounds is a no-op that still returns the current queue
+  state
+
+Editing semantics:
+- editing replaces the queued prompt text in place
+- editing does not change `promptId`, `createdAt`, or ownership
+- editing does not change relative order
+
+For demo implementations with weak auth, ownership may still be coarse. The
+demo profile for this repository grants queue-management permission to all
+connected participants, while still preserving `submittedBy` for visibility.
+The protocol shape should still assume real subject identity for stronger
+deployments.
 
 ## Realtime Events
 
@@ -216,6 +239,40 @@ Allowed `reason` values initially:
 This event is useful because it makes queue mutation explicit instead of forcing
 clients to infer removal from absence.
 
+### `queue_entry_updated`
+
+When a queued prompt is edited before start:
+
+```json
+{
+  "type": "queue_entry_updated",
+  "eventId": "e_54",
+  "timestamp": "2026-03-10T12:00:04Z",
+  "promptId": "p_122",
+  "position": 2,
+  "data": "Search HL7 Jira for Observation.component slicing and validator errors."
+}
+```
+
+### `queue_entry_moved`
+
+When a queued prompt is reordered before start:
+
+```json
+{
+  "type": "queue_entry_moved",
+  "eventId": "e_55",
+  "timestamp": "2026-03-10T12:00:05Z",
+  "promptId": "p_122",
+  "direction": "up",
+  "position": 1
+}
+```
+
+These mutation events are useful for lightweight clients, but after every queue
+mutation the runtime should also emit an authoritative `queue_snapshot` so all
+participants converge on the same state.
+
 ## Client WebSocket Messages
 
 ### `prompt`
@@ -245,6 +302,9 @@ The server responds with either:
 - `prompt_status` with `cancelled`
 - or `error` if the prompt is not cancellable
 
+Edit and reorder are REST mutations in the first demo contract. They are not
+required websocket client messages.
+
 ## REST API
 
 The runtime should expose queue state directly.
@@ -253,6 +313,8 @@ Suggested canonical paths:
 
 ```text
 GET    /apis/v1/namespaces/{ns}/workspaces/{workspace}/topics/{topic}/queue
+PATCH  /apis/v1/namespaces/{ns}/workspaces/{workspace}/topics/{topic}/queue/{promptId}
+POST   /apis/v1/namespaces/{ns}/workspaces/{workspace}/topics/{topic}/queue/{promptId}/move
 DELETE /apis/v1/namespaces/{ns}/workspaces/{workspace}/topics/{topic}/queue/{promptId}
 POST   /apis/v1/namespaces/{ns}/workspaces/{workspace}/topics/{topic}/queue:clear-mine
 ```
@@ -290,6 +352,49 @@ Responses:
 - `409` if the prompt has already started and is no longer cancellable
 - `404` if the prompt does not exist
 
+### `PATCH .../queue/{promptId}`
+
+Edits the text of one queued prompt if the caller has permission.
+
+Request body:
+
+```json
+{
+  "text": "Search HL7 Jira for Observation.component slicing and validator errors."
+}
+```
+
+Responses:
+- `200 OK` with the updated queue snapshot
+- `400` if `text` is missing or empty
+- `403` if the caller may not edit it
+- `409` if the prompt has already started and is no longer mutable
+- `404` if the prompt does not exist
+
+### `POST .../queue/{promptId}/move`
+
+Moves one queued prompt within the waiting list if the caller has permission.
+
+Request body:
+
+```json
+{
+  "direction": "up"
+}
+```
+
+Allowed `direction` values:
+- `up`
+- `down`
+- `top`
+
+Responses:
+- `200 OK` with the updated queue snapshot
+- `400` if `direction` is invalid
+- `403` if the caller may not move it
+- `409` if the prompt has already started and is no longer mutable
+- `404` if the prompt does not exist
+
 ### `POST .../queue:clear-mine`
 
 Removes all queued prompts for the authenticated caller in the topic.
@@ -309,7 +414,10 @@ Clients should treat the queue as a first-class collaboration surface.
 Minimum UI expectations:
 - show the active prompt
 - show queued prompts with position and owner
+- render the queue near the composer, not hidden in a secondary status page
 - allow "remove mine" on queued entries owned by the current caller
+- allow "edit mine" on queued entries owned by the current caller
+- allow "move mine up/down" on queued entries owned by the current caller
 - update queue state live from websocket events
 
 This is still not a true simultaneous multi-editor model, but it is much more
