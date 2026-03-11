@@ -160,6 +160,14 @@ function printQueueSnapshot(snapshot: any) {
   }
 }
 
+function actorLabel(message: any, fallback = "user") {
+  return message?.submittedBy?.displayName
+    || message?.submittedBy?.id
+    || message?.actor?.displayName
+    || message?.actor?.id
+    || fallback;
+}
+
 async function queue(name: string, topic = "general") {
   if (!name) { console.error("Usage: ws queue <workspace> <topic>"); process.exit(1); }
   const base = await workspaceBase(name);
@@ -360,7 +368,7 @@ async function connect(name: string, topic = "general") {
           console.log(`\x1b[90m[inject] ${msg.injectId} ${msg.status}${msg.reason ? ` (${msg.reason})` : ""}\x1b[0m`);
           break;
         case "user":
-          console.log(`\x1b[36m[user] ${msg.data}\x1b[0m`);
+          console.log(`\x1b[36m[${actorLabel(msg)}] ${msg.data}\x1b[0m`);
           break;
         case "text":
           process.stdout.write(msg.data);
