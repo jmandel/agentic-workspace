@@ -130,11 +130,15 @@ POST   /apis/v1/namespaces/{ns}/workspaces/{workspace}/commits/{commit}/clone   
 Each workspace also exposes a Resource API for direct access to files:
 
 ```
-GET    /apis/v1/namespaces/{ns}/workspaces/{workspace}/files/{path}  — read file content
-PUT    /apis/v1/namespaces/{ns}/workspaces/{workspace}/files/{path}  — write file content
-DELETE /apis/v1/namespaces/{ns}/workspaces/{workspace}/files/{path}  — delete file
-GET    /apis/v1/namespaces/{ns}/workspaces/{workspace}/files/{path}/ — list directory
+GET    /apis/v1/namespaces/{ns}/workspaces/{workspace}/files?path={relative-path}            — get file or directory metadata; directories include direct child entries
+GET    /apis/v1/namespaces/{ns}/workspaces/{workspace}/files/content?path={relative-path}    — read file content
+PUT    /apis/v1/namespaces/{ns}/workspaces/{workspace}/files/content?path={relative-path}    — write file content
+POST   /apis/v1/namespaces/{ns}/workspaces/{workspace}/files/directories?path={relative-path} — create a directory
+POST   /apis/v1/namespaces/{ns}/workspaces/{workspace}/files/move                             — move or rename a file or directory
+DELETE /apis/v1/namespaces/{ns}/workspaces/{workspace}/files?path={relative-path}            — delete a file or directory
 ```
+
+Paths are always workspace-relative. Absolute paths and traversal segments are invalid.
 
 ### Example
 

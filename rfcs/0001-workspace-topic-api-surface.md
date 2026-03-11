@@ -651,51 +651,108 @@ Queue mutation rules:
 The Shelley-backed profile currently exposes workspace file operations at:
 
 ```text
-/apis/v1/namespaces/{namespace}/workspaces/{workspace}/files/{path...}
+/apis/v1/namespaces/{namespace}/workspaces/{workspace}/files
+/apis/v1/namespaces/{namespace}/workspaces/{workspace}/files/content
+/apis/v1/namespaces/{namespace}/workspaces/{workspace}/files/directories
+/apis/v1/namespaces/{namespace}/workspaces/{workspace}/files/move
 ```
 
-This API is path-based and works today, but it is likely not the long-term
-shape we would choose for a more polished multi-implementation standard.
+All file paths are workspace-relative. The root directory is addressed by omitting
+`path` or sending it as the empty string. Absolute paths, backslashes, and
+traversal segments such as `..` are invalid.
 
-### 9.1 GET `/apis/v1/namespaces/{namespace}/workspaces/{workspace}/files/{path...}`
+### 9.1 GET `/apis/v1/namespaces/{namespace}/workspaces/{workspace}/files?path={relative-path}`
 
-If `{path...}` resolves to a file, the response body is the raw file content
-with a normal content type.
-
-If `{path...}` resolves to a directory, the response is a JSON listing:
+Returns JSON metadata for the addressed path. If the path is a directory, the
+response also includes its direct child entries.
 
 ```json
 {
-  "path": "/docs",
+  "node": {
+    "path": "docs",
+    "name": "docs",
+    "kind": "directory",
+    "size": 0,
+    "modifiedAt": "2026-03-11T12:00:00Z"
+  },
   "entries": [
     {
-      "name": "note.txt",
       "path": "docs/note.txt",
-      "isDir": false,
+      "name": "note.txt",
+      "kind": "file",
       "size": 15,
-      "modifiedAt": "2026-03-11T12:00:00Z"
+      "modifiedAt": "2026-03-11T12:00:00Z",
+      "mimeType": "text/plain; charset=utf-8"
     }
   ]
 }
 ```
 
-### 9.2 PUT `/apis/v1/namespaces/{namespace}/workspaces/{workspace}/files/{path...}`
+### 9.2 GET `/apis/v1/namespaces/{namespace}/workspaces/{workspace}/files/content?path={relative-path}`
 
-Writes the raw request body to the addressed workspace-relative path.
+Reads the addressed file and returns its raw content with the normal content
+type. Directory paths are rejected.
+
+### 9.3 PUT `/apis/v1/namespaces/{namespace}/workspaces/{workspace}/files/content?path={relative-path}`
+
+Writes the raw request body to the addressed workspace-relative file path.
+The parent directory must already exist.
 
 Example response:
 
 ```json
 {
-  "path": "docs/note.txt",
-  "size": 15,
-  "status": "ok"
+  "node": {
+    "path": "docs/note.txt",
+    "name": "note.txt",
+    "kind": "file",
+    "size": 15,
+    "modifiedAt": "2026-03-11T12:00:00Z",
+    "mimeType": "text/plain; charset=utf-8"
+  }
 }
 ```
 
-### 9.3 DELETE `/apis/v1/namespaces/{namespace}/workspaces/{workspace}/files/{path...}`
+### 9.4 POST `/apis/v1/namespaces/{namespace}/workspaces/{workspace}/files/directories?path={relative-path}`
 
-Deletes the addressed file or empty directory.
+Creates a directory. Intermediate directories may be created as needed.
+
+Example response:
+
+```json
+{
+  "node": {
+    "path": "docs",
+    "name": "docs",
+    "kind": "directory",
+    "size": 0,
+    "modifiedAt": "2026-03-11T12:00:00Z"
+  }
+}
+```
+
+### 9.5 POST `/apis/v1/namespaces/{namespace}/workspaces/{workspace}/files/move`
+
+Moves or renames a file or directory.
+
+Example request:
+
+```json
+{
+  "from": "docs/note.txt",
+  "to": "docs/archive/note.txt"
+}
+```
+
+The destination parent directory must already exist, and the destination path
+must not already exist.
+
+### 9.6 DELETE `/apis/v1/namespaces/{namespace}/workspaces/{workspace}/files?path={relative-path}[&recursive=true]`
+
+Deletes the addressed file or directory.
+
+- deleting a non-empty directory without `recursive=true` returns `409 Conflict`
+- deleting the workspace root is invalid
 
 Example response:
 
@@ -706,7 +763,11 @@ Example response:
 }
 ```
 
-Traversal outside the workspace root returns `403 Forbidden`.
+Path validation rules:
+
+- absolute paths return `400 Bad Request`
+- traversal outside the workspace root returns `403 Forbidden`
+- direct workspace runtime calls require a trusted workspace principal
 
 ## 10. Inject And Interrupt REST API
 
